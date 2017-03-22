@@ -1,0 +1,4 @@
+*.swp
+*.swo
+build
+src/$NULL$_config.h
