@@ -1,8 +1,3 @@
-/**@author $username$ <$usermail$>
- * @date $date$
- *
- * @brief yadisk-upload test launcher.*/
-
 // Google Testing Framework
 #include <gtest/gtest.h>
 
