@@ -16,7 +16,7 @@ limitations under the License.
 
 #include <iostream>
 #include <docopt/docopt.h>
-#include "Logging.hpp"
+#include <logging.hpp>
 #include <yandex/disk.hpp>
 
 static const char USAGE[] =

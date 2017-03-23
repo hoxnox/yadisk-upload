@@ -14,28 +14,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tls_transport.hpp"
-#include <logging.hpp>
+#pragma once
+
+#ifndef ILOG
+#include <iostream>
+#endif
 
 namespace yandex {
 
-tls_transport::tls_transport(std::string token)
-	: transport(token)
-{
-	ILOG << "ctor";
-}
+/**@brief Logging macro
+ *
+ * These should be redefined in client code*/
 
-bool
-tls_transport::get(std::string url, response_handler_t handler)
-{
-	ILOG << "get";
-}
+#ifndef _
+#define _(X) (X)
+#endif
 
-bool
-tls_transport::put(std::string url, response_handler_t handler)
-{
-	ILOG << "put";
-}
+#ifndef ILOG
+#define ILOG std::cout
+#endif
+
+#ifndef ELOG
+#define ELOG std::cout
+#endif
+
+#ifndef VLOG
+#define VLOG std::cout
+#endif
 
 } // namespace
 

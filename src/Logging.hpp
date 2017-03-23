@@ -14,10 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#pragma once
+#ifndef __LOGGING_GUARD__
+#define __LOGGING_GUARD__
 
 #include <easylogging++.h>
-#include "gettext.h"
+
+#ifndef _
+#define _(X) (X)
+#endif
 
 void inline
 init_logging(int level)
@@ -44,3 +48,5 @@ init_logging(int level)
 #undef VLOG
 #endif
 #define VLOG LOG(TRACE)
+
+#endif // __LOGGING_GUARD__

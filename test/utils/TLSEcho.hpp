@@ -15,27 +15,25 @@ limitations under the License.
 */
 
 #pragma once
-#ifndef ILOG
-#include <iostream>
-#endif
 
-namespace yandex {
+#include <cstdint>
+#include <vector>
 
-/**@brief Logging macro
- *
- * These should be redefined in client code*/
+#include "BaseEcho.hpp"
 
-#ifndef ILOG
-#define ILOG std::cout
-#endif
-
-#ifndef ELOG
-#define ELOG std::cout
-#endif
-
-#ifndef VLOG
-#define VLOG std::cout
-#endif
-
-} // namespace
+class TLSEcho : public BaseEcho
+{
+public:
+	TLSEcho(bool oneshot = true, std::vector<uint8_t> cert = DEFAULT_CERT, std::vector<uint8_t> pkey = DEFAULT_KEY)
+		: BaseEcho(), cert_(cert), pkey_(pkey), oneshot_{oneshot}
+	{ }
+protected:
+	void loop(std::string addr, unsigned short port) override;
+private:
+	std::vector<uint8_t> cert_;
+	std::vector<uint8_t> pkey_;
+	static const std::vector<uint8_t> DEFAULT_CERT;
+	static const std::vector<uint8_t> DEFAULT_KEY;
+	bool oneshot_{true};
+};
 

@@ -14,28 +14,39 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tls_transport.hpp"
-#include <logging.hpp>
+#include <yandex/tls_transport.hpp>
+#include <TLSEcho.hpp>
 
-namespace yandex {
-
-tls_transport::tls_transport(std::string token)
-	: transport(token)
+class TestTlsTransport : public testing::Test
 {
-	ILOG << "ctor";
+public:
+	void SetUp()
+	{
+		tls_server.Dispatch("127.0.0.241", 0x5555);
+	}
+	void TearDown()
+	{
+		tls_server.Stop();
+	}
+protected:
+	TLSEcho tls_server;
+};
+
+TEST(TestTlsTransport, get)
+{
+	yandex::tls_transport t("get");
+	t.get("yandex.ru/api", [](const std::string& data)
+		{
+			EXPECT_EQ("", data);
+		});
 }
 
-bool
-tls_transport::get(std::string url, response_handler_t handler)
+TEST(TestTlsTransport, put)
 {
-	ILOG << "get";
+	yandex::tls_transport t("put");
+	t.put("yandex.ru/api", [](const std::string& data)
+		{
+			EXPECT_EQ("", data);
+		});
 }
-
-bool
-tls_transport::put(std::string url, response_handler_t handler)
-{
-	ILOG << "put";
-}
-
-} // namespace
 

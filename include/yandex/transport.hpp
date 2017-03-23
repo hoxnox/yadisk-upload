@@ -23,7 +23,7 @@ namespace yandex {
 class transport
 {
 public:
-	using response_handler_t = std::function<void(std::vector<uint8_t>)>;
+	using response_handler_t = std::function<void(const std::string&)>;
 
 	transport(std::string token = "") : token_(token) {}
 	virtual bool get(std::string url, response_handler_t handler = nullptr) = 0;
