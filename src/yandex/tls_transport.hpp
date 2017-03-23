@@ -16,31 +16,18 @@ limitations under the License.
 
 #pragma once
 
-#include <easylogging++.h>
-#include "gettext.h"
+#include <yandex/transport.hpp>
 
-void inline
-init_logging(int level)
+namespace yandex {
+
+class tls_transport : public transport
 {
-	el::Loggers::addFlag(el::LoggingFlag::HierarchicalLogging);
-	el::Loggers::setLoggingLevel(el::Level::Fatal);
-	el::Loggers::reconfigureAllLoggers(el::ConfigurationType::Format,
-			"%levshort%datetime{%Y%M%dT%H%m%s} %msg");
-	if (level > 0)
-		el::Loggers::setLoggingLevel(el::Level::Trace);
-}
+	public:
+	tls_transport(std::string token = "");
+	bool get(std::string url, response_handler_t handler = nullptr) override;
+	bool put(std::string url, response_handler_t handler = nullptr) override;
+};
 
-#ifdef ILOG
-#undef ILOG
-#endif
-#define ILOG LOG(INFO)
+} // namespace
 
-#ifdef ELOG
-#undef ELOG
-#endif
-#define ELOG LOG(ERROR)
 
-#ifdef VLOG
-#undef VLOG
-#endif
-#define VLOG LOG(TRACE)

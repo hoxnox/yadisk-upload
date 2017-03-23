@@ -34,7 +34,7 @@ add_definitions("-DVERSION=\"${yadisk_upload_VERSION_MAJOR}.${yadisk_upload_VERS
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
                       "${PROJECT_SOURCE_DIR}/cmake/Modules")
 
-include_directories("${PROJECT_SOURCE_DIR}/src")
+include_directories("${PROJECT_SOURCE_DIR}/include")
 set(STAGING_DIR ${PROJECT_SOURCE_DIR}/build/staging)
 
 
@@ -45,18 +45,7 @@ else()
     set(LIBSUFFIX "")
 endif()
 
-########################################################################
-# tests and docs
-
-if(WITH_DOCS)
-	add_subdirectory(doc)
-endif()
-
-if(WITH_TESTS)
-	enable_testing()
-	add_subdirectory(test)
-endif()
-
+include("Vendoring")
 
 ########################################################################
 # docopt
@@ -129,14 +118,34 @@ endif()
 list(APPEND INCLUDE_DIR "${EASYLOGGING_INCLUDE_DIR}")
 
 ########################################################################
+# yandex api
+
+add_library(yandex_api
+	src/yandex/disk.cpp
+	src/yandex/tls_transport.cpp)
+list(APPEND LIBRARIES yandex_api)
+
+########################################################################
 # yadisk-uplaod
 
 add_executable(yadisk-upload
 	src/yadisk-upload.cpp
 	src/Logging.cpp)
-add_dependencies(yadisk-upload docopt easyloggingpp)
+add_dependencies(yadisk-upload docopt easyloggingpp yandex_api)
 target_link_libraries(yadisk-upload ${LIBRARIES})
 target_include_directories(yadisk-upload PRIVATE ${INCLUDE_DIR})
+
+########################################################################
+# tests and docs
+
+if(WITH_DOCS)
+	add_subdirectory(doc)
+endif()
+
+if(WITH_TESTS)
+	enable_testing()
+	add_subdirectory(test)
+endif()
 
 ########################################################################
 # installation

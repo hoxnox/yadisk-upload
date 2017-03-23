@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 // test cases
+#include "yandex/t_disk.hpp"
 
 int main(int argc, char *argv[])
 {

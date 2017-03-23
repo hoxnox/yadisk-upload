@@ -14,33 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#pragma once
+#include "tls_transport.hpp"
+#include <yandex/logging.hpp>
 
-#include <easylogging++.h>
-#include "gettext.h"
+namespace yandex {
 
-void inline
-init_logging(int level)
+tls_transport::tls_transport(std::string token)
+	: transport(token)
 {
-	el::Loggers::addFlag(el::LoggingFlag::HierarchicalLogging);
-	el::Loggers::setLoggingLevel(el::Level::Fatal);
-	el::Loggers::reconfigureAllLoggers(el::ConfigurationType::Format,
-			"%levshort%datetime{%Y%M%dT%H%m%s} %msg");
-	if (level > 0)
-		el::Loggers::setLoggingLevel(el::Level::Trace);
+	ILOG << "ctor";
 }
 
-#ifdef ILOG
-#undef ILOG
-#endif
-#define ILOG LOG(INFO)
+bool
+tls_transport::get(std::string url, response_handler_t handler)
+{
+	ILOG << "get";
+}
 
-#ifdef ELOG
-#undef ELOG
-#endif
-#define ELOG LOG(ERROR)
+bool
+tls_transport::put(std::string url, response_handler_t handler)
+{
+	ILOG << "put";
+}
 
-#ifdef VLOG
-#undef VLOG
-#endif
-#define VLOG LOG(TRACE)
+} // namespace
+

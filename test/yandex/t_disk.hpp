@@ -14,33 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#pragma once
+#include <yandex/disk.hpp>
+#include "transport_mock.hpp"
 
-#include <easylogging++.h>
-#include "gettext.h"
-
-void inline
-init_logging(int level)
+class TestYandexDisk : public ::testing::Test
 {
-	el::Loggers::addFlag(el::LoggingFlag::HierarchicalLogging);
-	el::Loggers::setLoggingLevel(el::Level::Fatal);
-	el::Loggers::reconfigureAllLoggers(el::ConfigurationType::Format,
-			"%levshort%datetime{%Y%M%dT%H%m%s} %msg");
-	if (level > 0)
-		el::Loggers::setLoggingLevel(el::Level::Trace);
+protected:
+	void SetUp()
+	{
+		transport = std::make_shared<TransportMock>();
+	}
+	std::shared_ptr<yandex::transport> transport{nullptr};
+};
+
+TEST_F(TestYandexDisk, ctor)
+{
+	yandex::disk::api api(transport);
 }
 
-#ifdef ILOG
-#undef ILOG
-#endif
-#define ILOG LOG(INFO)
-
-#ifdef ELOG
-#undef ELOG
-#endif
-#define ELOG LOG(ERROR)
-
-#ifdef VLOG
-#undef VLOG
-#endif
-#define VLOG LOG(TRACE)

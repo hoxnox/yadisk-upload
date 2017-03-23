@@ -15,32 +15,27 @@ limitations under the License.
 */
 
 #pragma once
-
-#include <easylogging++.h>
-#include "gettext.h"
-
-void inline
-init_logging(int level)
-{
-	el::Loggers::addFlag(el::LoggingFlag::HierarchicalLogging);
-	el::Loggers::setLoggingLevel(el::Level::Fatal);
-	el::Loggers::reconfigureAllLoggers(el::ConfigurationType::Format,
-			"%levshort%datetime{%Y%M%dT%H%m%s} %msg");
-	if (level > 0)
-		el::Loggers::setLoggingLevel(el::Level::Trace);
-}
-
-#ifdef ILOG
-#undef ILOG
+#ifndef ILOG
+#include <iostream>
 #endif
-#define ILOG LOG(INFO)
 
-#ifdef ELOG
-#undef ELOG
-#endif
-#define ELOG LOG(ERROR)
+namespace yandex {
 
-#ifdef VLOG
-#undef VLOG
+/**@brief Logging macro
+ *
+ * These should be redefined in client code*/
+
+#ifndef ILOG
+#define ILOG std::cout
 #endif
-#define VLOG LOG(TRACE)
+
+#ifndef ELOG
+#define ELOG std::cout
+#endif
+
+#ifndef VLOG
+#define VLOG std::cout
+#endif
+
+} // namespace
+

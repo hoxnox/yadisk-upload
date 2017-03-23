@@ -14,33 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#pragma once
+#include <yandex/disk.hpp>
+#include "tls_transport.hpp"
 
-#include <easylogging++.h>
-#include "gettext.h"
+namespace yandex {
+namespace disk {
 
-void inline
-init_logging(int level)
+api::api(std::string token)
+	: transport_(std::make_shared<tls_transport>(token))
 {
-	el::Loggers::addFlag(el::LoggingFlag::HierarchicalLogging);
-	el::Loggers::setLoggingLevel(el::Level::Fatal);
-	el::Loggers::reconfigureAllLoggers(el::ConfigurationType::Format,
-			"%levshort%datetime{%Y%M%dT%H%m%s} %msg");
-	if (level > 0)
-		el::Loggers::setLoggingLevel(el::Level::Trace);
 }
 
-#ifdef ILOG
-#undef ILOG
-#endif
-#define ILOG LOG(INFO)
+api::api(std::shared_ptr<transport> transport)
+	: transport_(transport)
+{
+}
 
-#ifdef ELOG
-#undef ELOG
-#endif
-#define ELOG LOG(ERROR)
+bool
+api::upload(std::string source, std::string destination)
+{
+}
 
-#ifdef VLOG
-#undef VLOG
-#endif
-#define VLOG LOG(TRACE)
+}} // namespace
+

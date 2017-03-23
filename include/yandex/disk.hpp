@@ -16,31 +16,28 @@ limitations under the License.
 
 #pragma once
 
-#include <easylogging++.h>
-#include "gettext.h"
+#include <memory>
 
-void inline
-init_logging(int level)
+#include "transport.hpp"
+
+namespace yandex {
+namespace disk {
+
+class api
 {
-	el::Loggers::addFlag(el::LoggingFlag::HierarchicalLogging);
-	el::Loggers::setLoggingLevel(el::Level::Fatal);
-	el::Loggers::reconfigureAllLoggers(el::ConfigurationType::Format,
-			"%levshort%datetime{%Y%M%dT%H%m%s} %msg");
-	if (level > 0)
-		el::Loggers::setLoggingLevel(el::Level::Trace);
-}
+public:
+	api(std::string token);
+	api(std::shared_ptr<transport> transport);
 
-#ifdef ILOG
-#undef ILOG
-#endif
-#define ILOG LOG(INFO)
+	/**@brief Upload file source into directory destination
+	 * @param destination directory on disk to upload
+	 * @param source file path on local machine
+	 * @note directories should exists*/
+	bool upload(std::string source, std::string destination);
 
-#ifdef ELOG
-#undef ELOG
-#endif
-#define ELOG LOG(ERROR)
+private:
+	std::shared_ptr<transport> transport_;
+};
 
-#ifdef VLOG
-#undef VLOG
-#endif
-#define VLOG LOG(TRACE)
+
+}} // namespace

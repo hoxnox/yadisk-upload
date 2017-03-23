@@ -15,32 +15,25 @@ limitations under the License.
 */
 
 #pragma once
+#include <functional>
+#include <vector>
 
-#include <easylogging++.h>
-#include "gettext.h"
+namespace yandex {
 
-void inline
-init_logging(int level)
+class transport
 {
-	el::Loggers::addFlag(el::LoggingFlag::HierarchicalLogging);
-	el::Loggers::setLoggingLevel(el::Level::Fatal);
-	el::Loggers::reconfigureAllLoggers(el::ConfigurationType::Format,
-			"%levshort%datetime{%Y%M%dT%H%m%s} %msg");
-	if (level > 0)
-		el::Loggers::setLoggingLevel(el::Level::Trace);
-}
+public:
+	using response_handler_t = std::function<void(std::vector<uint8_t>)>;
 
-#ifdef ILOG
-#undef ILOG
-#endif
-#define ILOG LOG(INFO)
+	transport(std::string token = "") : token_(token) {}
+	virtual bool get(std::string url, response_handler_t handler = nullptr) = 0;
+	virtual bool put(std::string url, response_handler_t handler = nullptr) = 0;
 
-#ifdef ELOG
-#undef ELOG
-#endif
-#define ELOG LOG(ERROR)
+	virtual ~transport() {}
 
-#ifdef VLOG
-#undef VLOG
-#endif
-#define VLOG LOG(TRACE)
+protected:
+	std::string token_;
+};
+
+} // namespace
+
