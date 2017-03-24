@@ -17,192 +17,135 @@ limitations under the License.
 #include <vector>
 #include <string>
 #include <memory>
+#include <functional>
 
-#include <errno.h>
-#include <ifaddrs.h>
-#include <sys/epoll.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
+#include <boost/bind.hpp>
 
-#include <Logging.hpp>
-#include <yandex/tls_context.hpp>
+#include <logging.hpp>
 #include "TLSEcho.hpp"
 
-#ifndef THORW
-class EchoException : public std::exception
+using namespace boost::asio;
+using ssl_socket = boost::asio::ssl::stream<boost::asio::ip::tcp::socket>;
+
+TLSEcho::TLSEcho(bool oneshot,
+                 std::string certfile,
+                 std::string privatefile,
+                 std::string dhfile)
+	: BaseEcho()
 {
-public:
-	EchoException(std::string msg = "") { ss_ << msg; }
-	EchoException(const EchoException& copy) { operator=(copy); };
-	EchoException& operator=(const EchoException& copy)
-		{ ss_ << copy.ss_.str(); return *this; }
+	context_.set_options(
+		ssl::context::default_workarounds
+		| ssl::context::no_sslv2
+		| ssl::context::single_dh_use);
 
-	const char* what() const noexcept(true) override
-		{ ss_copy_ = ss_.str(); return ss_copy_.c_str(); }
+	if (!certfile.empty())
+		context_.use_certificate_chain_file(certfile);
+	else
+		context_.use_certificate(const_buffer(DEFAULT_CERT.c_str(), DEFAULT_CERT.length()), ssl::context::pem);
 
-	EchoException& operator<(std::ostream& ss) { return *this; }
-	std::stringstream& _stream() { return ss_; }
-private:
-	std::stringstream ss_;
-	mutable std::string ss_copy_;
-};
-#define THROW for(EchoException e; true; ) throw e < e._stream()
-#endif
+	if (!privatefile.empty())
+		context_.use_private_key_file(privatefile, ssl::context::pem);
+	else
+		context_.use_private_key(const_buffer(DEFAULT_KEY.c_str(), DEFAULT_KEY.length()), ssl::context::pem);
+
+	if (!dhfile.empty())
+		context_.use_tmp_dh_file(dhfile.c_str());
+	else
+		context_.use_tmp_dh(const_buffer(DEFAULT_DH.c_str(), DEFAULT_DH.length()));
+}
 
 void
 TLSEcho::loop(std::string saddr, unsigned short port)
 {
-	int sock;
-	int on = 1;
-	struct sockaddr_in addr;
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = inet_addr(saddr.c_str());
-	addr.sin_port = htons(port);
-	sock = socket(addr.sin_family, SOCK_STREAM, IPPROTO_TCP);
-	if (sock == -1 || setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) != 0)
-	{
-		THROW << _(" TLSEcho: error initializing socket.")
-		      << _(" Message: ") << strerror(errno);
-	}
-	char tmp[50];
-	memset(tmp, 0, sizeof(tmp));
-	if (inet_ntop(AF_INET, &addr.sin_addr, tmp, sizeof(tmp)) == NULL)
-	{
-		THROW << _(" TLSEcho: given wrong address.")
-		      << _(" Message: ") << strerror(errno);
-	}
-	VLOG << this << (" TLSEcho: binding to address ") << tmp << ":" << port;
-	if (bind(sock, (sockaddr*)&addr, sizeof(addr)) < 0)
-	{
-		THROW << _(" TLSEcho: error binding socket")
-		      << _(" Message: ") << strerror(errno);
-	}
-	if (listen(sock, 1) == -1)
-	{
-		THROW << _(" TLSEcho: error calling listen.")
-		      << _(" Message: ") << strerror(errno);
-	}
-	VLOG << this << (" TLSEcho: socket initialized. Starting event loop.");
-
-	const int MAX_EPOLL_EVENTS = 2;
-	int epoll = epoll_create(1);
-	if (epoll == -1)
-	{
-		THROW << _(" TLSEcho: error epoll creating.")
-		      << _(" Message: ") << strerror(errno);
-	}
-
-	struct epoll_event ev;
-	ev.events = EPOLLERR | EPOLLRDHUP | EPOLLIN  | EPOLLPRI;
-	const uint32_t NOT_CONNECTED = 0;
-	ev.data.u32 = NOT_CONNECTED;
-	if (epoll_ctl(epoll, EPOLL_CTL_ADD, sock, &ev) == -1)
-	{
-		THROW << _(" TLSEcho: error registering epoll events.")
-		      << _(" Message: ") << strerror(errno);
-	}
-
-	stop_ = false;
-	while (!stop_)
-	{
-		struct epoll_event triggered[MAX_EPOLL_EVENTS];
-		int n = epoll_wait(epoll, triggered, MAX_EPOLL_EVENTS, 1000);
-		if (n == -1)
+	io_service   io_service;
+	ip::tcp::acceptor acc(io_service, ip::tcp::endpoint(
+		ip::address::from_string(saddr), port));
+	ssl_socket sock(io_service, context_);
+	acc.async_accept(sock.lowest_layer(),
+		[&](boost::system::error_code err)
 		{
-			if (errno == EINTR)
-				continue;
-			THROW << _(" TLSEcho: error epoll wait.")
-			      << _(" Message: ") << strerror(errno);
-		}
-		for (int i = 0; i < n; ++i)
-		{
-			if (triggered[i].events == EPOLLERR)
+			if (err)
 			{
-				THROW << _("TLSEcho: socket error.")
-				      << _(" Message: ") << strerror(errno);
+				ELOG << _("TLSEcho error.")
+				     << _(" Message: ") << err.message();
+				return;
 			}
-			else if (triggered[i].events == EPOLLRDHUP)
+			sock.handshake(ssl::stream_base::server, err);
+			if (err)
 			{
-				VLOG << _("Dosconnected.")
-				     << _(" Message: ") << strerror(errno);
-				shutdown(sock, SHUT_RDWR);
+				ELOG << _("TLSEcho handshake error.")
+				     << _(" Message: ") << err.message();
+				return;
 			}
-			else if ((triggered[i].events & EPOLLIN) ||
-			         (triggered[i].events & EPOLLPRI))
+			std::vector<uint8_t> buf(1024);
+			int rs = sock.read_some(buffer(buf.data(), buf.capacity()), err);
+			if (err)
 			{
-				struct sockaddr_in raddr;
-				VLOG << this << _(" TLSEcho: trying accept.");
-				socklen_t raddr_len = sizeof(raddr);
-				std::stringstream log_prefix;
-				int sock2 =accept(sock, (sockaddr*)&raddr, &raddr_len);
-				if (sock2 == -1)
-				{
-					THROW << _(" TLSEcho: error calling accept")
-					      << _(" Message: ") << strerror(errno);
-				}
-				log_prefix << this;
-				yandex::tls_context ctx(sock2, yandex::tls_context::method_t::SRV,
-						log_prefix.str(), cert_, pkey_);
-				int tlsrs = ctx.start();
-				if (tlsrs != 0)
-				{
-					THROW << _(" TLSEcho: error calling TLS context Start.")
-					      << _(" Message: ") << strerror(errno);
-				}
-				char tmp[50];
-				memset(tmp, 0, sizeof(tmp));
-				if (inet_ntop(AF_INET, &raddr.sin_addr, tmp, sizeof(tmp)))
-					VLOG << this << _(" TLSEcho: accepted from ") << tmp
-					     << ":" << ntohs(raddr.sin_port) << ". Mirroring.";
-				else
-					VLOG << this << _(" TLSEcho: accepted from <error translating>")
-					     << ". Message: " << strerror(errno) << ". Mirroring.";
-				char buf[0x10000];
-				memset(buf, 0, sizeof(buf));
-				do
-				{
-					int rs = SSL_read(ctx.ssl(), buf, sizeof(buf));
-					if (rs == -1)
-					{
-						ELOG << _(" TLSEcho: error data receiving.")
-						     << _(" rs = ") << rs
-						     << _(" Message: ") << strerror(errno)
-						     << _(" SSL code: ") << ERR_peek_last_error()
-						     << _(" SSL Message: ") << ERR_error_string(ERR_peek_last_error(), nullptr);
-						break;
-					}
-					if (rs == 0)
-						break;
-					for (size_t i = 0; rs > 0 && i < multiplier_; ++i)
-					{
-						int rs2 = SSL_write(ctx.ssl(), buf, rs);
-						if (rs2 != rs)
-						{
-							ELOG << _(" TLSEcho: error data sending.")
-							     << _(" rs = ") << rs
-							     << _(" Message: ") << strerror(errno)
-							     << _(" SSL code: ") << ERR_peek_last_error()
-							     << _(" SSL Message: ") << ERR_error_string(ERR_peek_last_error(), nullptr);
-							break;
-						}
-					}
-				} while(!oneshot_);
-				//std::cout << "DATA: " << buf << std::endl;
-				SSL_shutdown(ctx.ssl());
-				shutdown(sock2, SHUT_RDWR);
-				close(sock2);
+				ELOG << _("TLSEcho read_some error.")
+				     << _(" Message: ") << err.message();
+				return;
 			}
-		}
-	}
+			rs = write(sock, buffer(buf.data(), rs), err);
+			if (err)
+			{
+				ELOG << _("TLSEcho read_some error.")
+				     << _(" Message: ") << err.message();
+				return;
+			}
+			acc.accept(sock.lowest_layer());
+		});
+	io_service.run();
 }
 
-const std::vector<uint8_t> TLSEcho::DEFAULT_CERT = {
-};
+const std::string TLSEcho::DEFAULT_CERT =
+R"(
+-----BEGIN RSA PRIVATE KEY-----
+MIICXgIBAAKBgQDm9g893+HAbZwBclgefhFU29UJCQ6WqTDAqZiE+Sw8aW2jz/Ov
+yktRctNYSVfAiyxZ7uW07XZfPneDA6k/6OWXkUE8fWnRGROJ9Dsoj3wwjt+ta9Gl
+PU8mjYN81W0i9BanOzpnHPd1+m/nhZYfeOs/Fm0nLNWqM2ficCtndU4LXQIDAQAB
+AoGAL9GoTDZLZm0LTN1g00dkzT4KuKkwZQ84sdsrYfS5LPTjJ3SJzs7Ck2WDzpa4
+3XuzPheRZcl4pbWoRu7+HuZYiolTFw3QQeTbxV4246iZ95a/+mOFk0JIz9ZuieTP
+hAlyKHE4axRjVcwl08S/7hHFjFCoZre0ttz455AfB7a5L/0CQQD+tI3MhC2LRAqK
+ZfGci/9zpeY7sO1UJtkGlMA+bp2ZM8t6VGVu05+T+BczeQhYF1oU6drLwMkWjrxs
+xppAO8TzAkEA6CKbixUmfEozjSVrLl/48i4nV17xwho1DXZ01XQecFVv3hZuaWbA
+68k5c/wYn9NYhZV/WsWhERR0bA3ZTi9CbwJBAN1EMu8ZYItcZ5/FYfiyMg/gbjsq
+v3Hccari7IMQCz79HOY/jQKTO00LN/SST2pflvUWFunsp4Q+KXiBq5zjj3sCQQCA
+nmxAa7+fLh3SHuF8GID+7sOtjVW2jn7GrtOdUXFsHGqXSyZyEBTkj+HdedjK9Xce
+zO57hPTxWbwIAsRcpaLRAkEAnnzj5b6iqt5ck693tOQ4kWK4ZqpcaA3AuFSqdbwA
+5XNYwIop/2EZjG4bdwfG5SNobuBDCwUReyvj/U9LzVKFRA==
+-----END RSA PRIVATE KEY-----
+)";
 
-const std::vector<uint8_t> TLSEcho::DEFAULT_KEY = {
-};
+const std::string TLSEcho::DEFAULT_KEY =
+R"(
+-----BEGIN CERTIFICATE-----
+MIICxTCCAi6gAwIBAgIBAjANBgkqhkiG9w0BAQsFADCBqTELMAkGA1UEBhMCVVMx
+EzARBgNVBAgMCkNhbGlmb3JuaWExFjAUBgNVBAcMDVNhbnRhIEJhcmJhcmExEzAR
+BgNVBAoMClNTTCBTZXJ2ZXIxIjAgBgNVBAsMGUZvciBUZXN0aW5nIFB1cnBvc2Vz
+IE9ubHkxFTATBgNVBAMMDGxvY2FsaG9zdCBDQTEdMBsGCSqGSIb3DQEJARYOcm9v
+dEBsb2NhbGhvc3QwHhcNMTYwOTEzMTE0MDM0WhcNMTgwOTEzMTE0MDM0WjCBpjEL
+MAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExFjAUBgNVBAcMDVNhbnRh
+IEJhcmJhcmExEzARBgNVBAoMClNTTCBTZXJ2ZXIxIjAgBgNVBAsMGUZvciBUZXN0
+aW5nIFB1cnBvc2VzIE9ubHkxEjAQBgNVBAMMCWxvY2FsaG9zdDEdMBsGCSqGSIb3
+DQEJARYOcm9vdEBsb2NhbGhvc3QwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGB
+AOb2Dz3f4cBtnAFyWB5+EVTb1QkJDpapMMCpmIT5LDxpbaPP86/KS1Fy01hJV8CL
+LFnu5bTtdl8+d4MDqT/o5ZeRQTx9adEZE4n0OyiPfDCO361r0aU9TyaNg3zVbSL0
+Fqc7Omcc93X6b+eFlh946z8WbScs1aozZ+JwK2d1TgtdAgMBAAEwDQYJKoZIhvcN
+AQELBQADgYEAizioDhQq/V/4HxO+2Dtx/ngL8zwhaR7JA6or01dfL/wqEuj43+q7
+sIQdDZxsa++/fXUOwSLPlkAGFXfrlC+Y9Ut4hFWDYGfUwe42Ji0XRy/CVuupN+k+
+RmYalUhzokNTc1/r52bRrUmkDMZwvD8ujx/E2a6MzQkTv6+uiFobAsc=
+-----END CERTIFICATE-----
+)";
+
+const std::string TLSEcho::DEFAULT_DH =
+R"(
+-----BEGIN DH PARAMETERS-----
+MIIBCAKCAQEAjMjE/J9h71bciH4IfPXiSZb/aj5JV24/IWieb/Eyr5iKssjxPiKw
+AHmp+3xQO8Y8D67D57+3pueob0sX9Oe0jj8janED+FubLJcik1o7nebFncCO0ubM
+Z94B1O7bNo7299KbCFPQHTplWl8TW6CnL6/Q7LM4tarev+uuZudsKPVVpiG8SsTQ
+dqYAomWZpPQGIH6px8A2vJd+iNn8iOMitAyXbPIfKq5BPWc73RTeSV7thTxxM1VZ
+BuCq/8KZAzkIDF8XdzFq24/7BNRSJgEWW/atiCZMzJY0eNEMdTzLxHl/Vy+i+6+g
+s+GGs3Eo45gVhEqVEUhVqclUyeYE9UdHcwIBAg==
+-----END DH PARAMETERS-----
+)";
 

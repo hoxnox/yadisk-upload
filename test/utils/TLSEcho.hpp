@@ -18,22 +18,30 @@ limitations under the License.
 
 #include <cstdint>
 #include <vector>
+#include <chrono>
+#include <memory>
+
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include "BaseEcho.hpp"
 
 class TLSEcho : public BaseEcho
 {
 public:
-	TLSEcho(bool oneshot = true, std::vector<uint8_t> cert = DEFAULT_CERT, std::vector<uint8_t> pkey = DEFAULT_KEY)
-		: BaseEcho(), cert_(cert), pkey_(pkey), oneshot_{oneshot}
-	{ }
+	TLSEcho(bool oneshot = true,
+	        std::string certfile = "",
+	        std::string privatefile = "",
+	        std::string dhfile = "");
+
 protected:
 	void loop(std::string addr, unsigned short port) override;
+
 private:
-	std::vector<uint8_t> cert_;
-	std::vector<uint8_t> pkey_;
-	static const std::vector<uint8_t> DEFAULT_CERT;
-	static const std::vector<uint8_t> DEFAULT_KEY;
 	bool oneshot_{true};
+	static const std::string DEFAULT_CERT;
+	static const std::string DEFAULT_KEY;
+	static const std::string DEFAULT_DH;
+	boost::asio::ssl::context context_{boost::asio::ssl::context::sslv23};
 };
 

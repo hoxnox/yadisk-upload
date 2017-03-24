@@ -17,8 +17,10 @@ cmake_minimum_required(VERSION 3.3.0)
 ########################################################################
 # options
 
-option(WITH_TESTS "Build tests."  OFF)
-option(WITH_DOCS  "Generate docs" OFF)
+option(WITH_TESTS          "Build tests."  OFF)
+option(WITH_DOCS           "Generate docs" OFF)
+option(WITH_SYSTEM_BOOST   "Don't build boost with the project" ON)
+option(WITH_SYSTEM_OPENSSL "Don't build openssl with the project" ON)
 
 ########################################################################
 # general
@@ -83,8 +85,50 @@ else()
 endif()
 
 if (OpenSSL_FOUND)
-	include_directories(${OPENSSL_INCLUDE_DIR})
+	include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
 	list(APPEND LIBRARIES ${OPENSSL_LIBRARIES} dl z)
+endif()
+
+#########################################################################
+# boost
+
+if (WITH_SYSTEM_BOOST)
+	if(NOT BOOST_ROOT)
+		set(BOOST_ROOT $ENV{BOOST_ROOT})
+	endif()
+	find_package(Boost 1.47.0 COMPONENTS filesystem system REQUIRED)
+else()
+	set(Boost_ROOT "${STAGING_DIR}")
+	set(Boost_USE_STATIC_LIBS ON)
+	if (SECOND_PASS)
+		find_package(Boost 1.47.0 COMPONENST filesystem system REQUIRED)
+	else()
+		sources_url(BOOST
+			"boost.org/boost/boost_1_61_0.tar.gz"
+			"https://sourceforge.net/projects/boost/files/boost/1.61.0/boost_1_61_0.tar.gz/download")
+		ExternalProject_Add(boost
+			URL ${BOOST_URL}
+			DOWNLOAD_NAME boost_1_61_0.tar.gz
+			URL_HASH SHA256=a77c7cc660ec02704c6884fbb20c552d52d60a18f26573c9cee0788bf00ed7e6
+			CONFIGURE_COMMAND "./bootstrap.sh" --prefix=<INSTALL_DIR> --with-libraries=system,filesystem
+			BUILD_COMMAND "./b2" --ignore-site-config
+			INSTALL_COMMAND "./b2" --ignore-site-config install
+			BUILD_IN_SOURCE 1
+			INSTALL_DIR "${STAGING_DIR}"
+			LOG_DOWNLOAD 1
+			LOG_UPDATE 1
+			LOG_CONFIGURE 1
+			LOG_BUILD 1
+			LOG_TEST 1
+			LOG_INSTALL 1
+		)
+	endif()
+	list(APPEND TOBUILD_DEPS boost)
+endif()
+
+if (Boost_FOUND)
+	include_directories(BEFORE ${Boost_INCLUDE_DIRS})
+	list(APPEND LIBRARIES ${Boost_LIBRARIES})
 endif()
 
 ########################################################################
@@ -153,7 +197,7 @@ else()
 	)
 	set(EASYLOGGINGPP_INCLUDE_DIR "${STAGING_DIR}/include")
 endif()
-list(APPEND INCLUDE_DIR "${EASYLOGGING_INCLUDE_DIR}")
+include_directories(BEFORE "${EASYLOGGINGPP_INCLUDE_DIR}")
 
 # replace logging.hpp
 set(LOGGING_REPLACEMENT_DIR "${PROJECT_BINARY_DIR}/log")
@@ -173,13 +217,12 @@ endif()
 
 add_library(yandex_api
 	src/yandex/disk.cpp
-	src/yandex/tls_context.cpp
 	src/yandex/tls_transport.cpp)
 list(APPEND LIBRARIES yandex_api)
 
 target_include_directories(yandex_api PRIVATE "${LOGGING_REPLACEMENT_DIR}")
 target_include_directories(yandex_api BEFORE PUBLIC ${OPENSSL_INCLUDE_DIR})
-add_dependencies(yandex_api build_dependencies)
+add_dependencies(yandex_api build_dependencies easyloggingpp)
 
 ########################################################################
 # yadisk-uplaod
@@ -187,7 +230,7 @@ add_dependencies(yandex_api build_dependencies)
 add_executable(yadisk-upload
 	src/yadisk-upload.cpp
 	src/Logging.cpp)
-add_dependencies(yadisk-upload docopt easyloggingpp yandex_api)
+add_dependencies(yadisk-upload docopt yandex_api)
 target_link_libraries(yadisk-upload ${LIBRARIES})
 target_include_directories(yadisk-upload PRIVATE ${INCLUDE_DIR})
 
