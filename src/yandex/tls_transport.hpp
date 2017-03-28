@@ -22,10 +22,23 @@ namespace yandex {
 
 class tls_transport : public transport
 {
-	public:
-	tls_transport(std::string token = "");
-	bool get(std::string url, response_handler_t handler = nullptr) override;
-	bool put(std::string url, response_handler_t handler = nullptr) override;
+public:
+	tls_transport(std::string token = "",
+	              std::string host = "cloud.yandex.net",
+	              bool dont_verify = false);
+	~tls_transport();
+	/**@brief perform HTTP GET request*/
+	op_result_t get(std::string url, response_handler_t handler = nullptr) override;
+
+	/**@brief perform HTTP PUT request*/
+	op_result_t put(std::string url,
+	                std::basic_istream<char>& body,
+	                response_handler_t handler = nullptr) override;
+	void cancel() override;
+
+private:
+	class tls_transport_impl_;
+	tls_transport_impl_* impl_{nullptr};
 };
 
 } // namespace

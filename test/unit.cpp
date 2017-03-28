@@ -1,18 +1,43 @@
 // Google Testing Framework
 #include <gtest/gtest.h>
 
+std::stringstream inflog;
+std::stringstream errlog;
+std::stringstream vrblog;
+
 // test cases
 #include <Logging.hpp>
 #include "yandex/t_disk.hpp"
 #include "yandex/t_tls_transport.hpp"
 
+
+class DispatchToStream : public el::LogDispatchCallback
+{
+protected:
+	void handle(const el::LogDispatchData *data) override
+	{
+		if (data->logMessage()->level() == el::Level::Fatal
+		 || data->logMessage()->level() == el::Level::Error)
+		{
+			std::cerr << data->logMessage()->message() << std::endl;
+		}
+		else if (data->logMessage()->level() == el::Level::Trace)
+		{
+			std::cout << data->logMessage()->message() << std::endl;
+		}
+		else
+		{
+			std::cout << data->logMessage()->message() << std::endl;
+		}
+	}
+};
+
 int main(int argc, char *argv[])
 {
+	testing::InitGoogleTest(&argc, argv);
 	init_logging(1);
-	ILOG << "I";
-	ELOG << "E";
-	VLOG << "V";
-	::testing::InitGoogleTest(&argc, argv);
+	el::Loggers::reconfigureAllLoggers(el::ConfigurationType::ToStandardOutput, "FALSE");
+	el::Helpers::installLogDispatchCallback<DispatchToStream>("test");
 	return RUN_ALL_TESTS();
 }
 

@@ -17,17 +17,45 @@ limitations under the License.
 #pragma once
 #include <functional>
 #include <vector>
+#include <iostream>
 
 namespace yandex {
 
+/**@brief API transport interface
+ *
+ * @warning Realisation MUST be synchronous. When some operation is
+ * called (get or put) the caller must be locked until server response
+ * will arrive. It can be canceled by `cancel()` from alternate
+ * thread. When op is in the progress, another thread can't call any op.
+ * Attempt to do it MUST return INPROGRESS.*/
 class transport
 {
 public:
-	using response_handler_t = std::function<void(const std::string&)>;
+	enum class op_result_t : uint8_t
+	{
+		SUCCESS,
+		FAILED,
+		CANCELED,
+		INPROGRESS
+	};
 
-	transport(std::string token = "") : token_(token) {}
-	virtual bool get(std::string url, response_handler_t handler = nullptr) = 0;
-	virtual bool put(std::string url, response_handler_t handler = nullptr) = 0;
+	/**@brief called by operations when data arrives, can be called
+	 * several times during one operation. */
+	using response_handler_t = std::function<void(const std::string& url, const uint8_t* data, const size_t datasz)>;
+
+	transport(std::string token = "", std::string host = "cloud.yandex.net")
+		: token_(token) {}
+
+	/**@brief perform HTTP GET request*/
+	virtual op_result_t get(std::string url, response_handler_t handler = nullptr) = 0;
+
+	/**@brief perform HTTP PUT request*/
+	virtual op_result_t put(std::string url,
+	                        std::basic_istream<char>& body,
+	                        response_handler_t handler = nullptr) = 0;
+
+	/**@brief Can be used from another thread to cancel current operation.*/
+	virtual void cancel() = 0;
 
 	virtual ~transport() {}
 

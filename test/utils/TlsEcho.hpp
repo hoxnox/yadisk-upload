@@ -20,28 +20,40 @@ limitations under the License.
 #include <vector>
 #include <chrono>
 #include <memory>
+#include <thread>
+#include <future>
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 
-#include "BaseEcho.hpp"
-
-class TLSEcho : public BaseEcho
+class TlsEcho
 {
+using ssl_socket = boost::asio::ssl::stream<boost::asio::ip::tcp::socket>;
 public:
-	TLSEcho(bool oneshot = true,
+	TlsEcho(std::string addr,
+	        uint16_t port,
+	        bool oneshot = true,
 	        std::string certfile = "",
 	        std::string privatefile = "",
 	        std::string dhfile = "");
-
-protected:
-	void loop(std::string addr, unsigned short port) override;
+	~TlsEcho();
+	void Start();
+	void Stop();
+	void Dispatch();
+	bool CAToFile(std::string filename);
 
 private:
+	bool started_{false};
+	std::promise<void> start_notifier_;
+	std::unique_ptr<std::thread> thread_;
 	bool oneshot_{true};
-	static const std::string DEFAULT_CERT;
 	static const std::string DEFAULT_KEY;
+	static const std::string DEFAULT_CERT;
 	static const std::string DEFAULT_DH;
+	static const std::string DEFAULT_CA;
 	boost::asio::ssl::context context_{boost::asio::ssl::context::sslv23};
+	boost::asio::io_service io_service_;
+	boost::asio::ip::tcp::acceptor acceptor_;
+	std::unique_ptr<ssl_socket> sock_{nullptr};
 };
 

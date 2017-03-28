@@ -27,7 +27,7 @@ option(WITH_SYSTEM_OPENSSL "Don't build openssl with the project" ON)
 
 project(yadisk-upload)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(yadisk_upload_VERSION_MAJOR 0)
 set(yadisk_upload_VERSION_MINOR 0)
 set(yadisk_upload_VERSION_PATCH 0)
@@ -49,6 +49,12 @@ endif()
 
 include(Vendoring)
 include(ExternalProject)
+
+########################################################################
+# threads
+
+find_package(Threads REQUIRED)
+list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
 
 #########################################################################
 #openssl

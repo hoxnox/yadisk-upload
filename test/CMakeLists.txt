@@ -4,7 +4,7 @@
 
 include(gtest)
 add_executable(test_unit_${PROJECT_NAME} unit.cpp
-	utils/TLSEcho.cpp
+	utils/TlsEcho.cpp
 	${PROJECT_SOURCE_DIR}/src/Logging.cpp)
 add_dependencies(test_unit_${PROJECT_NAME} gtestlib yandex_api)
 target_link_libraries(test_unit_${PROJECT_NAME} ${LIBRARIES} ${GTEST_LIBRARIES})

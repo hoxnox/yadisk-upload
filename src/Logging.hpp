@@ -17,6 +17,7 @@ limitations under the License.
 #ifndef __LOGGING_GUARD__
 #define __LOGGING_GUARD__
 
+#define ELPP_THREAD_SAFE
 #include <easylogging++.h>
 
 #ifndef _

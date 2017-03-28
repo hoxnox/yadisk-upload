@@ -18,17 +18,23 @@ limitations under the License.
 
 #include <yandex/transport.hpp>
 
-class TransportMock : public yandex::transport
+class transport_mock : public yandex::transport
 {
 public:
-	TransportMock() : transport() {}
-	bool get(std::string url, response_handler_t handler = nullptr) override
-	{
-		return true;
-	}
-	bool put(std::string url, response_handler_t handler = nullptr) override
-	{
-		return true;
-	}
+	transport_mock() : transport() {}
+	~transport_mock() {}
+
+	op_result_t get(std::string url, response_handler_t handler = nullptr) override
+		{ return transport::op_result_t::FAILED; }
+
+	op_result_t put(std::string url,
+	                std::basic_istream<char>& body,
+	                response_handler_t handler = nullptr) override
+		{ return transport::op_result_t::FAILED; }
+
+	void cancel() override {}
+
+private:
+	std::string token_;
 };
 

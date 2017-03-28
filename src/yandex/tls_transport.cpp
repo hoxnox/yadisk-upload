@@ -16,25 +16,145 @@ limitations under the License.
 
 #include "tls_transport.hpp"
 #include <logging.hpp>
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 namespace yandex {
 
-tls_transport::tls_transport(std::string token)
-	: transport(token)
+using namespace boost::asio;
+using boost::asio::ip::tcp;
+namespace ssl = boost::asio::ssl;
+using ssl_socket = ssl::stream<tcp::socket>;
+
+enum class states : uint8_t
 {
-	ILOG << "ctor";
+	NONE,
+	READY,
+	INPROGRESS
+};
+
+struct tls_transport::tls_transport_impl_
+{
+	io_service   srv;
+	ssl::context ctx{ssl::context::sslv23};
+	ssl_socket   sock{srv, ctx};
+	std::string  token;
+	std::string  host;
+	states       state{states::NONE};
+};
+
+
+tls_transport::tls_transport(std::string token, std::string host, bool dont_verify)
+	: transport(token, host)
+	, impl_(new tls_transport_impl_)
+{
+	impl_->token = token;
+	impl_->host  = host;
+	try
+	{
+		impl_->ctx.set_default_verify_paths();
+		if (dont_verify)
+			impl_->sock.set_verify_mode(ssl::verify_none);
+		else
+			impl_->sock.set_verify_mode(ssl::verify_peer);
+		impl_->sock.set_verify_callback(ssl::rfc2818_verification(host));
+
+		tcp::resolver resolver(impl_->srv);
+		tcp::resolver::query query(host, "https");
+		connect(impl_->sock.lowest_layer(), resolver.resolve(query));
+		impl_->sock.lowest_layer().set_option(tcp::no_delay(true));
+		impl_->sock.handshake(ssl_socket::client);
+		VLOG << _("TLS handshake succeeded.");
+		impl_->state = states::READY;
+	}
+	catch (std::exception& e)
+	{
+		ELOG << "asio exception: " << e.what() << "\n";
+	}
 }
 
-bool
+tls_transport::~tls_transport()
+{
+	if (impl_)
+	{
+		boost::system::error_code err;
+		impl_->sock.shutdown(err);
+		delete impl_;
+	}
+}
+
+/**@brief perform HTTP GET request*/
+transport::op_result_t
 tls_transport::get(std::string url, response_handler_t handler)
 {
-	ILOG << "get";
+	if (impl_->state == states::INPROGRESS)
+	{
+		VLOG << ("Attempt to call `get` with busy transport.");
+		return op_result_t::INPROGRESS;
+	}
+	else if (impl_->state != states::READY)
+	{
+		VLOG << ("Transport is not ready.");
+		return op_result_t::FAILED;
+	}
+	boost::system::error_code err;
+	int rs;
+	std::stringstream req;
+	req << "GET " << url << " HTTP/1.1\r\n"
+	    << "Host: " << impl_->host << "\r\n"
+	    << "User-Agent: hoxnox/yadisk-upload\r\n"
+	    << "Accept: */*\r\n"
+	    << "Authorization: OAuth " << impl_->token << "\r\n\r\n";
+	rs = write(impl_->sock, buffer(req.str().c_str(), req.str().length()), err);
+	if (err)
+	{
+		ELOG << _("Error writing GET request.")
+		     << _(" URL: ") << url
+		     << _(" Message: ") << err.message();
+		return op_result_t::FAILED;
+	}
+	VLOG << _("Successfully send GET request.")
+	     << _(" URL: ") << url
+	     << _(" Bytes written: ") << rs;
+
+	uint8_t buf[1024];
+	rs = impl_->sock.read_some(buffer(buf, sizeof(buf)), err);
+	if (err)
+	{
+		ELOG << _("Error receiving GET response.")
+		     << _(" URL: ") << url
+		     << _(" Message: ") << err.message();
+		return op_result_t::FAILED;
+	}
+	VLOG << _("Successfully received GET response.")
+	     << _(" URL: ") << url
+	     << _(" Data length: ") << rs;
+	if (handler)
+		handler(url, buf, rs);
+	return op_result_t::SUCCESS;
 }
 
-bool
-tls_transport::put(std::string url, response_handler_t handler)
+/**@brief perform HTTP PUT request*/
+transport::op_result_t
+tls_transport::put(std::string url,
+                   std::basic_istream<char>& body,
+                   response_handler_t handler)
 {
-	ILOG << "put";
+	if (impl_->state == states::INPROGRESS)
+	{
+		VLOG << ("Attempt to call `get` with busy transport.");
+		return op_result_t::INPROGRESS;
+	}
+	else if (impl_->state != states::READY)
+	{
+		VLOG << ("Transport is not ready.");
+		return op_result_t::FAILED;
+	}
+}
+
+void
+tls_transport::cancel()
+{
 }
 
 } // namespace

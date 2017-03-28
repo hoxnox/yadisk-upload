@@ -22,7 +22,7 @@ class TestYandexDisk : public ::testing::Test
 protected:
 	void SetUp()
 	{
-		transport = std::make_shared<TransportMock>();
+		transport = std::make_shared<transport_mock>();
 	}
 	std::shared_ptr<yandex::transport> transport{nullptr};
 };

@@ -14,39 +14,65 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <memory>
+#include <sstream>
+
+#include <boost/filesystem.hpp>
+
 #include <yandex/tls_transport.hpp>
-#include <TLSEcho.hpp>
+#include <TlsEcho.hpp>
 
 class TestTlsTransport : public testing::Test
 {
 public:
 	void SetUp()
 	{
-		tls_server.Dispatch("127.0.0.241", 0x5555);
+		//tmpdir_ = boost::filesystem::unique_path("TestTlsTransport-%%%%");
+		//boost::filesystem::create_directories(tmpdir_);
+		tls_echo_ = std::make_unique<TlsEcho>("127.0.0.241", 443);
+		tls_echo_->Dispatch();
+		t_ = std::make_unique<yandex::tls_transport>(
+			"token", "127.0.0.241", true);
 	}
 	void TearDown()
 	{
-		tls_server.Stop();
+		//boost::filesystem::remove_all(tmpdir_.c_str());
+		tls_echo_.reset(nullptr);
+		EXPECT_TRUE(errlog.str().empty()) << errlog.str();
 	}
-protected:
-	TLSEcho tls_server;
+	std::unique_ptr<TlsEcho> tls_echo_{nullptr};
+	std::unique_ptr<yandex::tls_transport> t_{nullptr};
+	boost::filesystem::path tmpdir_;
 };
 
-TEST(TestTlsTransport, get)
+TEST_F(TestTlsTransport, get)
 {
-	yandex::tls_transport t("get");
-	t.get("yandex.ru/api", [](const std::string& data)
-		{
-			EXPECT_EQ("", data);
-		});
+	size_t callback_called_count = 0;
+	EXPECT_EQ(yandex::transport::op_result_t::SUCCESS,
+		t_->get("yandex.ru/api/get",
+			[&callback_called_count](const std::string& url, const uint8_t* data, size_t datasz)
+			{
+				EXPECT_EQ("GET api/get\r\n"
+				          "Host: yandex.ru\r\n", std::string(data, data + datasz));
+				++callback_called_count;
+			}));
+	EXPECT_EQ(1, callback_called_count);
 }
 
-TEST(TestTlsTransport, put)
+TEST_F(TestTlsTransport, put)
 {
-	yandex::tls_transport t("put");
-	t.put("yandex.ru/api", [](const std::string& data)
-		{
-			EXPECT_EQ("", data);
-		});
+	yandex::tls_transport t("token");
+	std::stringstream ss;
+	ss.str("DATA");
+	size_t callback_called_count = 0;
+	EXPECT_EQ(yandex::transport::op_result_t::SUCCESS,
+		t_->put("yandex.ru/api/put", ss,
+			[&callback_called_count](const std::string& url, const uint8_t* data, size_t datasz)
+			{
+				EXPECT_EQ("PUT api/get\r\n"
+				          "Host: yandex.ru\r\n", std::string(data, data + datasz));
+				++callback_called_count;
+			}));
+	EXPECT_EQ(1, callback_called_count);
 }
 
