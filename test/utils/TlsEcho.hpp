@@ -40,7 +40,6 @@ public:
 	void Start();
 	void Stop();
 	void Dispatch();
-	bool CAToFile(std::string filename);
 
 private:
 	bool started_{false};
