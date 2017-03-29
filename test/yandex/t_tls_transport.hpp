@@ -29,10 +29,10 @@ public:
 	{
 		//tmpdir_ = boost::filesystem::unique_path("TestTlsTransport-%%%%");
 		//boost::filesystem::create_directories(tmpdir_);
-		tls_echo_ = std::make_unique<TlsEcho>("127.0.0.241", 443);
+		tls_echo_ = std::make_unique<TlsEcho>("127.0.0.241", 0x4444);
 		tls_echo_->Dispatch();
 		t_ = std::make_unique<yandex::tls_transport>(
-			"token", "127.0.0.241", true);
+			"token", "127.0.0.241", 0x4444, true);
 	}
 	void TearDown()
 	{

@@ -54,7 +54,7 @@ struct tls_transport::tls_transport_impl_
 };
 
 
-tls_transport::tls_transport(std::string token, std::string host, bool dont_verify)
+tls_transport::tls_transport(std::string token, std::string host, uint16_t port, bool dont_verify)
 	: transport(token, host)
 	, impl_(new tls_transport_impl_)
 {
@@ -71,7 +71,7 @@ tls_transport::tls_transport(std::string token, std::string host, bool dont_veri
 		impl_->sock.set_verify_callback(ssl::rfc2818_verification(host));
 
 		tcp::resolver resolver(impl_->srv);
-		tcp::resolver::query query(host, "https");
+		tcp::resolver::query query(host, boost::lexical_cast<std::string>(port));
 		connect(impl_->sock.lowest_layer(), resolver.resolve(query));
 		impl_->sock.lowest_layer().set_option(tcp::no_delay(true));
 		impl_->sock.handshake(ssl_socket::client);

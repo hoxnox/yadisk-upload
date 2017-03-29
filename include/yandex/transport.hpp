@@ -43,7 +43,7 @@ public:
 	 * several times during one operation. */
 	using response_handler_t = std::function<void(const std::string& url, const uint8_t* data, const size_t datasz)>;
 
-	transport(std::string token = "", std::string host = "cloud.yandex.net")
+	transport(std::string token = "", std::string host = "cloud.yandex.net", uint16_t port = 443)
 		: token_(token) {}
 
 	/**@brief perform HTTP GET request*/
