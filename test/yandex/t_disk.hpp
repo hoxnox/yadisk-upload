@@ -50,12 +50,12 @@ TEST_F(TestYandexDisk, upload_nonexist_source)
 inline bool
 write_file(boost::filesystem::path fname, std::vector<uint8_t> data)
 {
-    std::ofstream ofile(fname.string().c_str(), std::ios::binary);
-    if (!ofile.is_open())
-        return false;
-    std::ostreambuf_iterator<char> writer(ofile);
-    std::copy(data.begin(), data.end(), writer);
-    return true;
+	std::ofstream ofile(fname.string().c_str(), std::ios::binary);
+	if (!ofile.is_open())
+		return false;
+	std::ostreambuf_iterator<char> writer(ofile);
+	std::copy(data.begin(), data.end(), writer);
+	return true;
 }
 
 TEST_F(TestYandexDisk, upload_nonexist_destination)
