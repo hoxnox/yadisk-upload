@@ -43,7 +43,6 @@ api::~api()
 		delete impl_;
 }
 
-
 bool
 api::upload(std::string source, std::string destination)
 {

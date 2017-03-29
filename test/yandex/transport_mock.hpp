@@ -57,6 +57,7 @@ public:
 		GET,
 		PUT
 	};
+
 	std::vector<std::pair<methods, std::string>> cmd_;
 private:
 	std::string token_;
