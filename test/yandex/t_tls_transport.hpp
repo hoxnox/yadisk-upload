@@ -49,11 +49,15 @@ TEST_F(TestTlsTransport, get)
 {
 	size_t callback_called_count = 0;
 	EXPECT_EQ(yandex::transport::op_result_t::SUCCESS,
-		t_->get("yandex.ru/api/get",
+		t_->get("api/get",
 			[&callback_called_count](const std::string& url, const uint8_t* data, size_t datasz)
 			{
-				EXPECT_EQ("GET api/get\r\n"
-				          "Host: yandex.ru\r\n", std::string(data, data + datasz));
+				EXPECT_EQ("GET api/get HTTP/1.1\r\n"
+				          "Host: 127.0.0.241\r\n"
+				          "User-Agent: hoxnox/yadisk-upload\r\n"
+				          "Accept: */*\r\n"
+				          "Authorization: OAuth token\r\n\r\n"
+				          , std::string(data, data + datasz));
 				++callback_called_count;
 			}));
 	EXPECT_EQ(1, callback_called_count);
@@ -66,11 +70,16 @@ TEST_F(TestTlsTransport, put)
 	ss.str("DATA");
 	size_t callback_called_count = 0;
 	EXPECT_EQ(yandex::transport::op_result_t::SUCCESS,
-		t_->put("yandex.ru/api/put", ss,
+		t_->put("api/put", ss, 0,
 			[&callback_called_count](const std::string& url, const uint8_t* data, size_t datasz)
 			{
-				EXPECT_EQ("PUT api/get\r\n"
-				          "Host: yandex.ru\r\n", std::string(data, data + datasz));
+				EXPECT_EQ("PUT api/put HTTP/1.1\r\n"
+				          "Host: 127.0.0.241\r\n"
+				          "User-Agent: hoxnox/yadisk-upload\r\n"
+				          "Accept: */*\r\n"
+				          "Content-Length: 4\r\n"
+				          "Content-Type: application/octet-stream\r\n\r\n"
+				          , std::string(data, data + datasz));
 				++callback_called_count;
 			}));
 	EXPECT_EQ(1, callback_called_count);

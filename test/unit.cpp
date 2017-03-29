@@ -19,15 +19,15 @@ protected:
 		if (data->logMessage()->level() == el::Level::Fatal
 		 || data->logMessage()->level() == el::Level::Error)
 		{
-			std::cerr << data->logMessage()->message() << std::endl;
+			errlog << data->logMessage()->message() << std::endl;
 		}
 		else if (data->logMessage()->level() == el::Level::Trace)
 		{
-			std::cout << data->logMessage()->message() << std::endl;
+			vrblog << data->logMessage()->message() << std::endl;
 		}
 		else
 		{
-			std::cout << data->logMessage()->message() << std::endl;
+			inflog << data->logMessage()->message() << std::endl;
 		}
 	}
 };

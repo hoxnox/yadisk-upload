@@ -49,9 +49,11 @@ public:
 	/**@brief perform HTTP GET request*/
 	virtual op_result_t get(std::string url, response_handler_t handler = nullptr) = 0;
 
-	/**@brief perform HTTP PUT request*/
+	/**@brief perform HTTP PUT request
+	 * @param bodysz if set to 0, send until body.good()*/
 	virtual op_result_t put(std::string url,
 	                        std::basic_istream<char>& body,
+	                        size_t bodysz = 0,
 	                        response_handler_t handler = nullptr) = 0;
 
 	/**@brief Can be used from another thread to cancel current operation.*/

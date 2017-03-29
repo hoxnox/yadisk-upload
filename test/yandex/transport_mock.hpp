@@ -29,6 +29,7 @@ public:
 
 	op_result_t put(std::string url,
 	                std::basic_istream<char>& body,
+	                size_t bodysz = 0,
 	                response_handler_t handler = nullptr) override
 		{ return transport::op_result_t::FAILED; }
 

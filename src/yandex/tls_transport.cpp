@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <array>
+
 #include "tls_transport.hpp"
 #include <logging.hpp>
 #include <boost/asio.hpp>
@@ -41,6 +43,8 @@ struct tls_transport::tls_transport_impl_
 	std::string  token;
 	std::string  host;
 	states       state{states::NONE};
+	size_t       write_buffer_size{1024*1024};
+	transport::op_result_t read_response(std::string url, transport::response_handler_t handler);
 };
 
 
@@ -83,6 +87,26 @@ tls_transport::~tls_transport()
 	}
 }
 
+transport::op_result_t
+tls_transport::tls_transport_impl_::read_response(std::string url, transport::response_handler_t handler)
+{
+	streambuf buf;
+	boost::system::error_code err;
+	int rs = read_until(sock, buf, "\r\n\r\n", err);
+	if (err)
+	{
+		ELOG << _("Error receiving server response.")
+		     << _(" URL: ") << url
+		     << _(" Message: ") << err.message();
+		return transport::op_result_t::FAILED;
+	}
+	VLOG << _("Successfully received server response.")
+	     << _(" Data length: ") << rs;
+	if (handler)
+		handler(url, buffer_cast<const uint8_t*>(buf.data()), rs);
+	return transport::op_result_t::SUCCESS;
+}
+
 /**@brief perform HTTP GET request*/
 transport::op_result_t
 tls_transport::get(std::string url, response_handler_t handler)
@@ -117,27 +141,14 @@ tls_transport::get(std::string url, response_handler_t handler)
 	     << _(" URL: ") << url
 	     << _(" Bytes written: ") << rs;
 
-	uint8_t buf[1024];
-	rs = impl_->sock.read_some(buffer(buf, sizeof(buf)), err);
-	if (err)
-	{
-		ELOG << _("Error receiving GET response.")
-		     << _(" URL: ") << url
-		     << _(" Message: ") << err.message();
-		return op_result_t::FAILED;
-	}
-	VLOG << _("Successfully received GET response.")
-	     << _(" URL: ") << url
-	     << _(" Data length: ") << rs;
-	if (handler)
-		handler(url, buf, rs);
-	return op_result_t::SUCCESS;
+	return impl_->read_response(url, handler);
 }
 
 /**@brief perform HTTP PUT request*/
 transport::op_result_t
 tls_transport::put(std::string url,
                    std::basic_istream<char>& body,
+                   size_t bodysz,
                    response_handler_t handler)
 {
 	if (impl_->state == states::INPROGRESS)
@@ -150,6 +161,49 @@ tls_transport::put(std::string url,
 		VLOG << ("Transport is not ready.");
 		return op_result_t::FAILED;
 	}
+	boost::system::error_code err;
+	int rs;
+	std::stringstream req;
+	req << "PUT " << url << " HTTP/1.1\r\n"
+	    << "Host: " << impl_->host << "\r\n"
+	    << "User-Agent: hoxnox/yadisk-upload\r\n"
+	       "Accept: */*\r\n"
+	       "Content-Length: 4\r\n"
+	       "Content-Type: application/octet-stream\r\n\r\n";
+	rs = write(impl_->sock, buffer(req.str().c_str(), req.str().length()), err);
+	if (err)
+	{
+		ELOG << _("Error writing PUT request.")
+		     << _(" URL: ") << url
+		     << _(" Message: ") << err.message();
+		return op_result_t::FAILED;
+	}
+	VLOG << _("Successfully send PUT headers.")
+	     << _(" URL: ") << url
+	     << _(" Bytes written: ") << rs;
+
+	// send data
+	std::vector<char> buf(impl_->write_buffer_size);
+	size_t data_read = 0;
+	while (body.good() && (bodysz == 0 || data_read < bodysz))
+	{
+		body.read(buf.data(), impl_->write_buffer_size);
+		if (body.gcount() == 0)
+			break;
+		data_read += body.gcount();
+		rs = write(impl_->sock, buffer(buf, body.gcount()), err);
+		if (err)
+		{
+			ELOG << _("Error writing PUT data.")
+			     << _(" URL: ") << url
+			     << _(" Message: ") << err.message();
+			return op_result_t::FAILED;
+		}
+		VLOG << _("Send PUT data portion.")
+		     << _(" Size: ") << rs;
+	}
+
+	return impl_->read_response(url, handler);
 }
 
 void

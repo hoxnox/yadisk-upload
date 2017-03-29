@@ -18,8 +18,9 @@ limitations under the License.
 #include <string>
 #include <memory>
 #include <functional>
+#include <regex>
 
-#include <boost/bind.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <logging.hpp>
 #include "TlsEcho.hpp"
@@ -112,16 +113,40 @@ TlsEcho::TlsEcho(std::string addr,
 				     << _(" Message: ") << err.message();
 				return;
 			}
-			std::vector<uint8_t> buf(1024);
-			int rs = sock_->read_some(buffer(buf.data(), buf.capacity()), err);
+
+			streambuf buf;
+			int rs = read_until(*sock_, buf, "\r\n\r\n", err);
+			//int rs = sock_->read_some(buffer(buf.data(), buf.capacity()), err);
 			if (err)
 			{
 				ELOG << _("TlsEcho read_some error.")
 				     << _(" Message: ") << err.message();
 				return;
 			}
-			VLOG << _("TlsEcho have read data.") << _(" Size: ") << rs;
-			rs = write(*sock_, buffer(buf.data(), rs), err);
+			VLOG << _("TlsEcho have read header.") << _(" Size: ") << rs;
+
+			const char* headers_data = buffer_cast<const char*>(buf.data());
+			size_t  headers_sz = buf.size();
+			std::match_results<const char*> m;
+			std::regex rx = std::regex("content-length:\\s*(\\d+)", std::regex::icase);
+			if (std::regex_search(headers_data, headers_data + headers_sz, m, rx))
+			{
+				size_t content_length = boost::lexical_cast<size_t>(m[1]);
+				VLOG << _("TlsEcho meet content length header.")
+				     << _(" Fetched size: ") << content_length;
+				rs += read(*sock_, buf.prepare(content_length), transfer_exactly(content_length), err);
+				if (err)
+				{
+					ELOG << _("TlsEcho read_some error.")
+					     << _(" Message: ") << err.message();
+					return;
+				}
+				VLOG << _("TlsEcho have read data.") << _(" Total size: ") << rs;
+			}
+
+			VLOG << _("TlsEcho mirroring.");
+
+			rs = write(*sock_, buf, err);
 			if (err)
 			{
 				ELOG << _("TlsEcho write error.")
