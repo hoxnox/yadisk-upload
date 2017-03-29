@@ -31,7 +31,7 @@ namespace yandex {
 class transport
 {
 public:
-	enum class op_result_t : uint8_t
+	enum class op_results : uint8_t
 	{
 		SUCCESS,
 		FAILED,
@@ -41,20 +41,24 @@ public:
 
 	/**@brief called by operations when data arrives, can be called
 	 * several times during one operation. */
-	using response_handler_t = std::function<void(const std::string& url, const uint8_t* data, const size_t datasz)>;
+	using response_handler_t = std::function<void(const std::string& url,
+	                                              const uint8_t* data,
+	                                              const size_t datasz)>;
 
-	transport(std::string token = "", std::string host = "cloud.yandex.net", uint16_t port = 443)
+	transport(std::string token = "",
+	          std::string host = "cloud.yandex.net",
+	          uint16_t port = 443)
 		: token_(token) {}
 
 	/**@brief perform HTTP GET request*/
-	virtual op_result_t get(std::string url, response_handler_t handler = nullptr) = 0;
+	virtual op_results get(std::string url, response_handler_t handler = nullptr) = 0;
 
 	/**@brief perform HTTP PUT request
 	 * @param bodysz if set to 0, send until body.good()*/
-	virtual op_result_t put(std::string url,
-	                        std::basic_istream<char>& body,
-	                        size_t bodysz = 0,
-	                        response_handler_t handler = nullptr) = 0;
+	virtual op_results put(std::string url,
+	                       std::basic_istream<char>& body,
+	                       size_t bodysz = 0,
+	                       response_handler_t handler = nullptr) = 0;
 
 	/**@brief Can be used from another thread to cancel current operation.*/
 	virtual void cancel() = 0;

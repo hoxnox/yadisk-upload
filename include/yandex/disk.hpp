@@ -27,7 +27,8 @@ class api
 {
 public:
 	api(std::string token);
-	api(std::shared_ptr<transport> transport);
+	api(std::shared_ptr<transport> cmd_transport);
+	~api();
 
 	/**@brief Upload file source into directory destination
 	 * @param destination directory on disk to upload
@@ -36,7 +37,8 @@ public:
 	bool upload(std::string source, std::string destination);
 
 private:
-	std::shared_ptr<transport> transport_;
+	struct api_impl_;
+	api_impl_* impl_;
 };
 
 

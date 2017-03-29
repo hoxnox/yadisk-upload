@@ -20,15 +20,29 @@ limitations under the License.
 namespace yandex {
 namespace disk {
 
-api::api(std::string token)
-	: transport_(std::make_shared<tls_transport>(token))
+struct api::api_impl_
 {
+	std::shared_ptr<transport> cmd_transport{nullptr};
+};
+
+api::api(std::string token)
+	: impl_(new api_impl_)
+{
+	impl_->cmd_transport = std::make_shared<tls_transport>(token);
 }
 
 api::api(std::shared_ptr<transport> transport)
-	: transport_(transport)
+	: impl_(new api_impl_)
 {
+	impl_->cmd_transport = transport;
 }
+
+api::~api()
+{
+	if (impl_)
+		delete impl_;
+}
+
 
 bool
 api::upload(std::string source, std::string destination)

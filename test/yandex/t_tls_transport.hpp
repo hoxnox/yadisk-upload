@@ -49,7 +49,7 @@ TEST_F(TestTlsTransport, get)
 {
 	size_t callback_called_count = 0;
 	std::vector<uint8_t> buf;
-	EXPECT_EQ(yandex::transport::op_result_t::SUCCESS,
+	EXPECT_EQ(yandex::transport::op_results::SUCCESS,
 		t_->get("api/get",
 			[&callback_called_count, &buf](const std::string& url,
 			                               const uint8_t* data,
@@ -74,7 +74,7 @@ TEST_F(TestTlsTransport, put)
 	ss.str("DATA");
 	std::vector<uint8_t> buf;
 	size_t callback_called_count = 0;
-	EXPECT_EQ(yandex::transport::op_result_t::SUCCESS,
+	EXPECT_EQ(yandex::transport::op_results::SUCCESS,
 		t_->put("api/put", ss, 0,
 			[&callback_called_count, &buf](const std::string& url,
 			                               const uint8_t* data,

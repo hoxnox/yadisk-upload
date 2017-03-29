@@ -16,6 +16,9 @@ limitations under the License.
 
 #pragma once
 
+#include <utility>
+#include <vector>
+
 #include <yandex/transport.hpp>
 
 class transport_mock : public yandex::transport
@@ -24,17 +27,37 @@ public:
 	transport_mock() : transport() {}
 	~transport_mock() {}
 
-	op_result_t get(std::string url, response_handler_t handler = nullptr) override
-		{ return transport::op_result_t::FAILED; }
+	op_results
+	get(std::string url, response_handler_t handler = nullptr) override
+	{
+		cmd_.emplace_back(methods::GET, url);
+		if (handler)
+			handler(url, NULL, 0);
+		return transport::op_results::SUCCESS;
+	}
 
-	op_result_t put(std::string url,
-	                std::basic_istream<char>& body,
-	                size_t bodysz = 0,
-	                response_handler_t handler = nullptr) override
-		{ return transport::op_result_t::FAILED; }
+	op_results
+	put(std::string url,
+	    std::basic_istream<char>& body,
+	    size_t bodysz = 0,
+	    response_handler_t handler = nullptr) override
+	{
+		cmd_.emplace_back(methods::PUT, url);
+		if (handler)
+			handler(url, NULL, 0);
+		return transport::op_results::SUCCESS;
+	}
 
-	void cancel() override {}
+	void cancel() override
+	{
+	}
 
+	enum class methods : uint8_t
+	{
+		GET,
+		PUT
+	};
+	std::vector<std::pair<methods, std::string>> cmd_;
 private:
 	std::string token_;
 };
