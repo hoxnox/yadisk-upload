@@ -48,40 +48,50 @@ public:
 TEST_F(TestTlsTransport, get)
 {
 	size_t callback_called_count = 0;
+	std::vector<uint8_t> buf;
 	EXPECT_EQ(yandex::transport::op_result_t::SUCCESS,
 		t_->get("api/get",
-			[&callback_called_count](const std::string& url, const uint8_t* data, size_t datasz)
+			[&callback_called_count, &buf](const std::string& url,
+			                               const uint8_t* data,
+			                               size_t datasz)
 			{
-				EXPECT_EQ("GET api/get HTTP/1.1\r\n"
-				          "Host: 127.0.0.241\r\n"
-				          "User-Agent: hoxnox/yadisk-upload\r\n"
-				          "Accept: */*\r\n"
-				          "Authorization: OAuth token\r\n\r\n"
-				          , std::string(data, data + datasz));
+				std::copy(data, data + datasz, std::back_inserter(buf));
 				++callback_called_count;
 			}));
-	EXPECT_EQ(1, callback_called_count);
+
+	EXPECT_EQ("GET api/get HTTP/1.1\r\n"
+	          "Host: 127.0.0.241\r\n"
+	          "User-Agent: hoxnox/yadisk-upload\r\n"
+	          "Accept: */*\r\n"
+	          "Authorization: OAuth token\r\n\r\n"
+	          , std::string(buf.begin(), buf.end()));
+	EXPECT_LT(0, callback_called_count);
 }
 
 TEST_F(TestTlsTransport, put)
 {
-	yandex::tls_transport t("token");
 	std::stringstream ss;
 	ss.str("DATA");
+	std::vector<uint8_t> buf;
 	size_t callback_called_count = 0;
 	EXPECT_EQ(yandex::transport::op_result_t::SUCCESS,
 		t_->put("api/put", ss, 0,
-			[&callback_called_count](const std::string& url, const uint8_t* data, size_t datasz)
+			[&callback_called_count, &buf](const std::string& url,
+			                               const uint8_t* data,
+			                               size_t datasz)
 			{
-				EXPECT_EQ("PUT api/put HTTP/1.1\r\n"
-				          "Host: 127.0.0.241\r\n"
-				          "User-Agent: hoxnox/yadisk-upload\r\n"
-				          "Accept: */*\r\n"
-				          "Content-Length: 4\r\n"
-				          "Content-Type: application/octet-stream\r\n\r\n"
-				          , std::string(data, data + datasz));
+				std::copy(data, data + datasz, std::back_inserter(buf));
 				++callback_called_count;
 			}));
-	EXPECT_EQ(1, callback_called_count);
+
+	EXPECT_EQ("PUT api/put HTTP/1.1\r\n"
+	          "Host: 127.0.0.241\r\n"
+	          "User-Agent: hoxnox/yadisk-upload\r\n"
+	          "Accept: */*\r\n"
+	          "Content-Length: 4\r\n"
+	          "Content-Type: application/octet-stream\r\n\r\n"
+	          "DATA"
+	          , std::string(buf.begin(), buf.end()));
+	EXPECT_LT(0, callback_called_count);
 }
 

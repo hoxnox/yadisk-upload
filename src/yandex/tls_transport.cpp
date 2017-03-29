@@ -14,12 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <array>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <regex>
+#include <iostream>
 
 #include "tls_transport.hpp"
 #include <logging.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace yandex {
 
@@ -37,13 +42,14 @@ enum class states : uint8_t
 
 struct tls_transport::tls_transport_impl_
 {
-	io_service   srv;
-	ssl::context ctx{ssl::context::sslv23};
-	ssl_socket   sock{srv, ctx};
-	std::string  token;
-	std::string  host;
-	states       state{states::NONE};
-	size_t       write_buffer_size{1024*1024};
+	io_service        srv;
+	ssl::context      ctx{ssl::context::sslv23};
+	ssl_socket        sock{srv, ctx};
+	std::string       token;
+	std::string       host;
+	states            state{states::NONE};
+	size_t            io_bufsz{1024*1024};
+	std::vector<char> io_buf;
 	transport::op_result_t read_response(std::string url, transport::response_handler_t handler);
 };
 
@@ -54,6 +60,7 @@ tls_transport::tls_transport(std::string token, std::string host, bool dont_veri
 {
 	impl_->token = token;
 	impl_->host  = host;
+	impl_->io_buf.reserve(impl_->io_bufsz);
 	try
 	{
 		impl_->ctx.set_default_verify_paths();
@@ -90,20 +97,56 @@ tls_transport::~tls_transport()
 transport::op_result_t
 tls_transport::tls_transport_impl_::read_response(std::string url, transport::response_handler_t handler)
 {
-	streambuf buf;
+	streambuf buf(io_bufsz);
 	boost::system::error_code err;
-	int rs = read_until(sock, buf, "\r\n\r\n", err);
+	int headers_sz = read_until(sock, buf, "\r\n\r\n", err);
 	if (err)
 	{
-		ELOG << _("Error receiving server response.")
-		     << _(" URL: ") << url
+		ELOG << _("Error reading server response headers.")
 		     << _(" Message: ") << err.message();
 		return transport::op_result_t::FAILED;
 	}
-	VLOG << _("Successfully received server response.")
-	     << _(" Data length: ") << rs;
+	VLOG << _("Headers read.") << _(" Size: ") << headers_sz
+	                           << _(" Buffer size: ") << buf.size();
 	if (handler)
-		handler(url, buffer_cast<const uint8_t*>(buf.data()), rs);
+		handler(url, buffer_cast<const uint8_t*>(buf.data()), headers_sz);
+
+	const char* headers_data = buffer_cast<const char*>(buf.data());
+	std::match_results<const char*> m;
+	std::regex rx = std::regex("content-length:\\s*(\\d+)", std::regex::icase);
+	if (std::regex_search(headers_data, headers_data + headers_sz, m, rx))
+	{
+		size_t content_length = boost::lexical_cast<size_t>(m[1]);
+		VLOG << _("Server response has body.") << _(" Size: ") << content_length;
+		if (content_length > io_bufsz)
+		{
+			VLOG << _("Server response body will be truncated to the length of io_buf.")
+			     << _(" Content-Length: ")  << content_length << ", buffer size: " << io_bufsz;
+			content_length = io_bufsz;
+		}
+		buf.consume(headers_sz);
+		if (buf.size() > 0 && content_length > 0)
+		{
+			int to_consume = std::min(buf.size(), content_length);
+			if (handler)
+				handler(url, buffer_cast<const uint8_t*>(buf.data()), to_consume);
+			buf.consume(to_consume);
+			content_length -= to_consume;
+		}
+		if (content_length == 0)
+			return transport::op_result_t::SUCCESS;
+		int body_sz = read(sock, buf, transfer_exactly(content_length), err);
+		if (err)
+		{
+			ELOG << _("Error reading server response body.")
+			     << _(" Message: ") << err.message();
+			return transport::op_result_t::FAILED;
+		}
+		if (handler)
+			handler(url, buffer_cast<const uint8_t*>(buf.data()), body_sz);
+		VLOG << _("Server response body read.") << _(" Total size: ") << headers_sz + body_sz;
+	}
+
 	return transport::op_result_t::SUCCESS;
 }
 
@@ -183,15 +226,14 @@ tls_transport::put(std::string url,
 	     << _(" Bytes written: ") << rs;
 
 	// send data
-	std::vector<char> buf(impl_->write_buffer_size);
 	size_t data_read = 0;
 	while (body.good() && (bodysz == 0 || data_read < bodysz))
 	{
-		body.read(buf.data(), impl_->write_buffer_size);
+		body.read(impl_->io_buf.data(), impl_->io_bufsz);
 		if (body.gcount() == 0)
 			break;
 		data_read += body.gcount();
-		rs = write(impl_->sock, buffer(buf, body.gcount()), err);
+		rs = write(impl_->sock, buffer(impl_->io_buf.data(), body.gcount()), err);
 		if (err)
 		{
 			ELOG << _("Error writing PUT data.")

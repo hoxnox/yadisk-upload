@@ -134,7 +134,7 @@ TlsEcho::TlsEcho(std::string addr,
 				size_t content_length = boost::lexical_cast<size_t>(m[1]);
 				VLOG << _("TlsEcho meet content length header.")
 				     << _(" Fetched size: ") << content_length;
-				rs += read(*sock_, buf.prepare(content_length), transfer_exactly(content_length), err);
+				rs += read(*sock_, buf, transfer_exactly(content_length), err);
 				if (err)
 				{
 					ELOG << _("TlsEcho read_some error.")
