@@ -45,7 +45,6 @@ struct tls_transport::tls_transport_impl_
 	io_service        srv;
 	ssl::context      ctx{ssl::context::sslv23};
 	ssl_socket        sock{srv, ctx};
-	std::string       token;
 	std::string       host;
 	states            state{states::NONE};
 	size_t            io_bufsz{1024*1024};
@@ -58,8 +57,8 @@ struct tls_transport::tls_transport_impl_
 tls_transport::tls_transport(std::string token, std::string host, uint16_t port, bool dont_verify)
 	: transport(token, host)
 	, impl_(new tls_transport_impl_)
+	, token_(token)
 {
-	impl_->token = token;
 	impl_->host  = host;
 	impl_->io_buf.reserve(impl_->io_bufsz);
 	try
@@ -194,7 +193,7 @@ tls_transport::get(std::string url, response_handler_t handler)
 	    << "Host: " << impl_->host << "\r\n"
 	    << "User-Agent: hoxnox/yadisk-upload\r\n"
 	    << "Accept: */*\r\n"
-	    << "Authorization: OAuth " << impl_->token << "\r\n\r\n";
+	    << "Authorization: OAuth " << token_ << "\r\n\r\n";
 	rs = write(impl_->sock, buffer(req.str().c_str(), req.str().length()), err);
 	if (err)
 	{

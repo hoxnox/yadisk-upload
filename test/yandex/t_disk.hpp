@@ -24,6 +24,7 @@ class TestYandexDisk : public ::testing::Test
 protected:
 	void SetUp()
 	{
+		errlog.str("");
 		tmpdir_ = boost::filesystem::unique_path("TestTlsTransport-%%%%");
 		boost::filesystem::create_directories(tmpdir_);
 		transport = std::make_shared<transport_mock>();
@@ -34,6 +35,7 @@ protected:
 		boost::filesystem::remove_all(tmpdir_.c_str());
 		api.reset(nullptr);
 		transport = nullptr;
+		EXPECT_TRUE(errlog.str().empty());
 	}
 	std::shared_ptr<yandex::transport> transport{nullptr};
 	std::unique_ptr<yandex::disk::api> api{nullptr};
@@ -44,6 +46,8 @@ TEST_F(TestYandexDisk, upload_nonexist_source)
 {
 	EXPECT_FALSE(api->upload((tmpdir_/"nonexist").string(), "destination"));
 	transport_mock* t = dynamic_cast<transport_mock*>(transport.get());
+	EXPECT_TRUE(errlog.str().find("Error opening file. Filename: ") != std::string::npos);
+	errlog.str("");
 	EXPECT_EQ(0, t->cmd_.size());
 }
 
@@ -58,11 +62,23 @@ write_file(boost::filesystem::path fname, std::vector<uint8_t> data)
 	return true;
 }
 
-TEST_F(TestYandexDisk, upload_nonexist_destination)
+TEST_F(TestYandexDisk, upload_bad_destination)
 {
 	write_file(tmpdir_/"source", {0x01, 0x02, 0x03, 0x04});
-	EXPECT_FALSE(api->upload((tmpdir_/"source").string(), "destination"));
+	EXPECT_FALSE(api->upload((tmpdir_/"source").string(), "bad"));
 	transport_mock* t = dynamic_cast<transport_mock*>(transport.get());
 	EXPECT_NE(0, t->cmd_.size());
+}
+
+TEST_F(TestYandexDisk, upload_happy_path)
+{
+	write_file(tmpdir_/"source", {0x01, 0x02, 0x03, 0x04});
+	EXPECT_FALSE(api->upload((tmpdir_/"source").string(), "destination дир"));
+	transport_mock* t = dynamic_cast<transport_mock*>(transport.get());
+	EXPECT_NE(0, t->cmd_.size());
+	std::vector<std::pair<transport_mock::methods, std::string>> etalon{
+		{transport_mock::methods::GET, "/v1/disk/resources/upload?path=destination+%D0%B4%D0%B8%D1%80"},
+		{transport_mock::methods::PUT, "/upload-target/20170323T090039.180.utd.cvczzjdwcbn59g8sqchqxfh32-k17h.1885364"}};
+	EXPECT_EQ(etalon, t->cmd_);
 }
 

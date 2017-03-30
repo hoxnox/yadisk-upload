@@ -17,6 +17,7 @@ limitations under the License.
 #pragma once
 #include <functional>
 #include <vector>
+#include <memory>
 #include <iostream>
 
 namespace yandex {
@@ -79,6 +80,10 @@ public:
 	virtual void cancel(uint16_t code = 0, std::string message = "") = 0;
 
 	virtual ~transport() {}
+
+	/**@brief Create new transport with the same type.*/
+	virtual std::shared_ptr<transport>
+		make_transport(std::string host, uint16_t port) = 0;
 
 protected:
 	std::string token_;

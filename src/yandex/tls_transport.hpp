@@ -38,9 +38,14 @@ public:
 	             response_handler_t handler = nullptr) override;
 	void cancel(uint16_t code = 0, std::string message = "") override;
 
+	std::shared_ptr<transport>
+		make_transport(std::string host, uint16_t port) override
+			{ return std::make_shared<tls_transport>(token_, host, port); }
+
 private:
 	class tls_transport_impl_;
 	tls_transport_impl_* impl_{nullptr};
+	std::string token_;
 };
 
 } // namespace

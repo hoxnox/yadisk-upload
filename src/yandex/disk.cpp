@@ -17,6 +17,7 @@ limitations under the License.
 #include <iomanip>
 #include <sstream>
 
+#include <boost/filesystem.hpp>
 #include <yandex/disk.hpp>
 #include <logging.hpp>
 
@@ -48,6 +49,16 @@ api::~api()
 		delete impl_;
 }
 
+inline
+std::string hex(unsigned char c)
+{
+	std::string rs;
+	const char hex[] = "0123456789ABCDEF";
+	rs += hex[c/0x10];
+	rs += hex[c%0x10];
+	return rs;
+}
+
 inline std::string
 url_encode(std::string str)
 {
@@ -59,7 +70,7 @@ url_encode(std::string str)
 		else if (c == ' ') 
 			rs << '+';
 		else 
-			rs << '%' << std::setw(2) << std::setfill('0') << std::hex << (int)c;
+			rs << '%' << hex(c);
 	}
 	return rs.str();
 }
@@ -68,11 +79,18 @@ url_encode(std::string str)
 bool
 api::upload(std::string source, std::string destination)
 {
+	boost::filesystem::path fs_source(source);
+	std::ifstream ifile(fs_source.string().c_str(), std::ios::binary);
+	if (!ifile.good())
+	{
+		ELOG << _("Error opening file.")
+		     << _(" Filename: \"") << fs_source.string() << "\"";
+		return false;
+	}
 	auto rs = impl_->cmd_transport->get("/v1/disk/resources/upload?path=" + url_encode(destination));
 	if (!rs)
 	{
-		ELOG << _("Error getting upload URL.")
-		     << _(" Code: ") << rs.code() << _(", Message: ") << rs.message();
+		ELOG << _("Error getting upload URL. ") << rs;
 		return false;
 	}
 }

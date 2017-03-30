@@ -42,6 +42,12 @@ public:
 	    size_t bodysz = 0,
 	    response_handler_t handler = nullptr) override
 	{
+		if (url == "/v1/disk/resources/upload?path=bad")
+		{
+			if (handler)
+				handler(url, NULL, 0);
+			return {transport::result_t::FAILED};
+		}
 		cmd_.emplace_back(methods::PUT, url);
 		if (handler)
 			handler(url, NULL, 0);
@@ -51,6 +57,10 @@ public:
 	void cancel(uint16_t code = 0, std::string message = "")
 	{
 	}
+
+	std::shared_ptr<transport>
+		make_transport(std::string host, uint16_t port) override
+			{ return std::make_shared<transport_mock>(); }
 
 	enum class methods : uint8_t
 	{
