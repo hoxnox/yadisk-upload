@@ -50,7 +50,8 @@ struct tls_transport::tls_transport_impl_
 	states            state{states::NONE};
 	size_t            io_bufsz{1024*1024};
 	std::vector<char> io_buf;
-	transport::op_results read_response(std::string url, transport::response_handler_t handler);
+	transport::result_t read_response(std::string url, transport::response_handler_t handler);
+	transport::result_t parse_status(const char* data, size_t datasz);
 };
 
 
@@ -94,7 +95,27 @@ tls_transport::~tls_transport()
 	}
 }
 
-transport::op_results
+transport::result_t
+tls_transport::tls_transport_impl_::parse_status(const char* status, size_t totalsz)
+{
+	std::match_results<const char*> m;
+	const char* status_end = status;
+	while (status_end[0] != '\r' && status_end[1] != '\n' && status_end < status + totalsz)
+		++status_end;
+	std::regex rx_status = std::regex("^HTTP/1.??\\s+(\\d\\d\\d)\\s*(.*)$", std::regex::icase);
+	if (!std::regex_match(status, status_end, m, rx_status))
+	{
+		ELOG << _("Error parsing status line.")
+		     << _(" Status: ") << std::string(status, status_end);
+		return {transport::result_t::FAILED};
+	}
+	uint16_t code = boost::lexical_cast<uint16_t>(m[1]);
+	if (code < 200 || code > 299)
+		return {transport::result_t::FAILED, code, m[2]};
+	return {transport::result_t::SUCCESS, code, m[2]};
+}
+
+transport::result_t
 tls_transport::tls_transport_impl_::read_response(std::string url, transport::response_handler_t handler)
 {
 	streambuf buf(io_bufsz);
@@ -104,7 +125,7 @@ tls_transport::tls_transport_impl_::read_response(std::string url, transport::re
 	{
 		ELOG << _("Error reading server response headers.")
 		     << _(" Message: ") << err.message();
-		return transport::op_results::FAILED;
+		return {transport::result_t::FAILED};
 	}
 	VLOG << _("Headers read.") << _(" Size: ") << headers_sz
 	                           << _(" Buffer size: ") << buf.size();
@@ -112,6 +133,8 @@ tls_transport::tls_transport_impl_::read_response(std::string url, transport::re
 		handler(url, buffer_cast<const uint8_t*>(buf.data()), headers_sz);
 
 	const char* headers_data = buffer_cast<const char*>(buf.data());
+	transport::result_t op_rs = parse_status(headers_data, headers_sz);
+
 	std::match_results<const char*> m;
 	std::regex rx = std::regex("content-length:\\s*(\\d+)", std::regex::icase);
 	if (std::regex_search(headers_data, headers_data + headers_sz, m, rx))
@@ -134,35 +157,35 @@ tls_transport::tls_transport_impl_::read_response(std::string url, transport::re
 			content_length -= to_consume;
 		}
 		if (content_length == 0)
-			return transport::op_results::SUCCESS;
+			return op_rs;
 		int body_sz = read(sock, buf, transfer_exactly(content_length), err);
 		if (err)
 		{
 			ELOG << _("Error reading server response body.")
 			     << _(" Message: ") << err.message();
-			return transport::op_results::FAILED;
+			return {transport::result_t::FAILED};
 		}
 		if (handler)
 			handler(url, buffer_cast<const uint8_t*>(buf.data()), body_sz);
 		VLOG << _("Server response body read.") << _(" Total size: ") << headers_sz + body_sz;
 	}
 
-	return transport::op_results::SUCCESS;
+	return op_rs;
 }
 
 /**@brief perform HTTP GET request*/
-transport::op_results
+transport::result_t
 tls_transport::get(std::string url, response_handler_t handler)
 {
 	if (impl_->state == states::INPROGRESS)
 	{
 		VLOG << ("Attempt to call `get` with busy transport.");
-		return op_results::INPROGRESS;
+		return {result_t::INPROGRESS};
 	}
 	else if (impl_->state != states::READY)
 	{
 		VLOG << ("Transport is not ready.");
-		return op_results::FAILED;
+		return {result_t::FAILED};
 	}
 	boost::system::error_code err;
 	int rs;
@@ -178,7 +201,7 @@ tls_transport::get(std::string url, response_handler_t handler)
 		ELOG << _("Error writing GET request.")
 		     << _(" URL: ") << url
 		     << _(" Message: ") << err.message();
-		return op_results::FAILED;
+		return {result_t::FAILED};
 	}
 	VLOG << _("Successfully send GET request.")
 	     << _(" URL: ") << url
@@ -188,7 +211,7 @@ tls_transport::get(std::string url, response_handler_t handler)
 }
 
 /**@brief perform HTTP PUT request*/
-transport::op_results
+transport::result_t
 tls_transport::put(std::string url,
                    std::basic_istream<char>& body,
                    size_t bodysz,
@@ -197,12 +220,12 @@ tls_transport::put(std::string url,
 	if (impl_->state == states::INPROGRESS)
 	{
 		VLOG << ("Attempt to call `get` with busy transport.");
-		return op_results::INPROGRESS;
+		return result_t::INPROGRESS;
 	}
 	else if (impl_->state != states::READY)
 	{
 		VLOG << ("Transport is not ready.");
-		return op_results::FAILED;
+		return result_t::FAILED;
 	}
 	boost::system::error_code err;
 	int rs;
@@ -219,7 +242,7 @@ tls_transport::put(std::string url,
 		ELOG << _("Error writing PUT request.")
 		     << _(" URL: ") << url
 		     << _(" Message: ") << err.message();
-		return op_results::FAILED;
+		return result_t::FAILED;
 	}
 	VLOG << _("Successfully send PUT headers.")
 	     << _(" URL: ") << url
@@ -239,7 +262,7 @@ tls_transport::put(std::string url,
 			ELOG << _("Error writing PUT data.")
 			     << _(" URL: ") << url
 			     << _(" Message: ") << err.message();
-			return op_results::FAILED;
+			return result_t::FAILED;
 		}
 		VLOG << _("Send PUT data portion.")
 		     << _(" Size: ") << rs;
@@ -249,7 +272,7 @@ tls_transport::put(std::string url,
 }
 
 void
-tls_transport::cancel()
+tls_transport::cancel(uint16_t code, std::string message)
 {
 }
 

@@ -27,16 +27,16 @@ public:
 	transport_mock() : transport() {}
 	~transport_mock() {}
 
-	op_results
+	result_t
 	get(std::string url, response_handler_t handler = nullptr) override
 	{
 		cmd_.emplace_back(methods::GET, url);
 		if (handler)
 			handler(url, NULL, 0);
-		return transport::op_results::SUCCESS;
+		return {transport::result_t::SUCCESS};
 	}
 
-	op_results
+	result_t
 	put(std::string url,
 	    std::basic_istream<char>& body,
 	    size_t bodysz = 0,
@@ -45,10 +45,10 @@ public:
 		cmd_.emplace_back(methods::PUT, url);
 		if (handler)
 			handler(url, NULL, 0);
-		return transport::op_results::SUCCESS;
+		return {transport::result_t::SUCCESS};
 	}
 
-	void cancel() override
+	void cancel(uint16_t code = 0, std::string message = "")
 	{
 	}
 

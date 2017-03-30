@@ -49,16 +49,16 @@ TEST_F(TestTlsTransport, get)
 {
 	size_t callback_called_count = 0;
 	std::vector<uint8_t> buf;
-	EXPECT_EQ(yandex::transport::op_results::SUCCESS,
-		t_->get("api/get",
-			[&callback_called_count, &buf](const std::string& url,
-			                               const uint8_t* data,
-			                               size_t datasz)
-			{
-				std::copy(data, data + datasz, std::back_inserter(buf));
-				++callback_called_count;
-			}));
-
+	t_->get("api/get",
+		[&callback_called_count, &buf](const std::string& url,
+		                               const uint8_t* data,
+		                               size_t datasz)
+		{
+			std::copy(data, data + datasz, std::back_inserter(buf));
+			++callback_called_count;
+		});
+	EXPECT_EQ("Error parsing status line. Status: GET api/get HTTP/1.1\n", errlog.str());
+	errlog.str("");
 	EXPECT_EQ("GET api/get HTTP/1.1\r\n"
 	          "Host: 127.0.0.241\r\n"
 	          "User-Agent: hoxnox/yadisk-upload\r\n"
@@ -74,16 +74,16 @@ TEST_F(TestTlsTransport, put)
 	ss.str("DATA");
 	std::vector<uint8_t> buf;
 	size_t callback_called_count = 0;
-	EXPECT_EQ(yandex::transport::op_results::SUCCESS,
-		t_->put("api/put", ss, 0,
-			[&callback_called_count, &buf](const std::string& url,
-			                               const uint8_t* data,
-			                               size_t datasz)
-			{
-				std::copy(data, data + datasz, std::back_inserter(buf));
-				++callback_called_count;
-			}));
-
+	t_->put("api/put", ss, 0,
+		[&callback_called_count, &buf](const std::string& url,
+		                               const uint8_t* data,
+		                               size_t datasz)
+		{
+			std::copy(data, data + datasz, std::back_inserter(buf));
+			++callback_called_count;
+		});
+	EXPECT_EQ("Error parsing status line. Status: PUT api/put HTTP/1.1\n", errlog.str());
+	errlog.str("");
 	EXPECT_EQ("PUT api/put HTTP/1.1\r\n"
 	          "Host: 127.0.0.241\r\n"
 	          "User-Agent: hoxnox/yadisk-upload\r\n"

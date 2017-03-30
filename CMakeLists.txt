@@ -223,7 +223,8 @@ endif()
 
 add_library(yandex_api
 	src/yandex/disk.cpp
-	src/yandex/tls_transport.cpp)
+	src/yandex/tls_transport.cpp
+	src/yandex/transport.cpp)
 list(APPEND LIBRARIES yandex_api)
 
 target_include_directories(yandex_api PRIVATE "${LOGGING_REPLACEMENT_DIR}")

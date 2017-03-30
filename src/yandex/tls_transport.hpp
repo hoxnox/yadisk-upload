@@ -29,14 +29,14 @@ public:
 	              bool dont_verify = false);
 	~tls_transport();
 	/**@brief perform HTTP GET request*/
-	op_results get(std::string url, response_handler_t handler = nullptr) override;
+	result_t get(std::string url, response_handler_t handler = nullptr) override;
 
 	/**@brief perform HTTP PUT request*/
-	op_results put(std::string url,
-	               std::basic_istream<char>& body,
-	               size_t bodysz = 0,
-	               response_handler_t handler = nullptr) override;
-	void cancel() override;
+	result_t put(std::string url,
+	             std::basic_istream<char>& body,
+	             size_t bodysz = 0,
+	             response_handler_t handler = nullptr) override;
+	void cancel(uint16_t code = 0, std::string message = "") override;
 
 private:
 	class tls_transport_impl_;

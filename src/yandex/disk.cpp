@@ -14,7 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <iomanip>
+#include <sstream>
+
 #include <yandex/disk.hpp>
+#include <logging.hpp>
+
 #include "tls_transport.hpp"
 
 namespace yandex {
@@ -43,9 +48,33 @@ api::~api()
 		delete impl_;
 }
 
+inline std::string
+url_encode(std::string str)
+{
+	std::stringstream rs;
+	for (auto c : str)
+	{
+		if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') 
+			rs << c;
+		else if (c == ' ') 
+			rs << '+';
+		else 
+			rs << '%' << std::setw(2) << std::setfill('0') << std::hex << (int)c;
+	}
+	return rs.str();
+}
+
+/**@note Don't escape special symbols in parameters. Use UTF-8.*/
 bool
 api::upload(std::string source, std::string destination)
 {
+	auto rs = impl_->cmd_transport->get("/v1/disk/resources/upload?path=" + url_encode(destination));
+	if (!rs)
+	{
+		ELOG << _("Error getting upload URL.")
+		     << _(" Code: ") << rs.code() << _(", Message: ") << rs.message();
+		return false;
+	}
 }
 
 }} // namespace

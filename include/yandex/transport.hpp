@@ -31,12 +31,27 @@ namespace yandex {
 class transport
 {
 public:
-	enum class op_results : uint8_t
+	class result_t
 	{
-		SUCCESS,
-		FAILED,
-		CANCELED,
-		INPROGRESS
+	public:
+		enum types: uint8_t
+		{
+			SUCCESS    = 0,
+			FAILED     = 10,
+			CANCELED   = 20,
+			INPROGRESS = 30,
+		};
+		result_t(types tp, uint16_t code = 0, std::string msg = "")
+			: type_(tp), code_(code), msg_(msg) {}
+		operator bool() const { return type_ == 0; }
+		uint8_t  type() const { return type_; }
+		uint16_t code() const { return code_; }
+		std::string message() const { return msg_; }
+	private:
+		types       type_;
+		uint16_t    code_{0};
+		std::string msg_;
+	friend class transport;
 	};
 
 	/**@brief called by operations when data arrives, can be called
@@ -51,17 +66,17 @@ public:
 		: token_(token) {}
 
 	/**@brief perform HTTP GET request*/
-	virtual op_results get(std::string url, response_handler_t handler = nullptr) = 0;
+	virtual result_t get(std::string url, response_handler_t handler = nullptr) = 0;
 
 	/**@brief perform HTTP PUT request
 	 * @param bodysz if set to 0, send until body.good()*/
-	virtual op_results put(std::string url,
-	                       std::basic_istream<char>& body,
-	                       size_t bodysz = 0,
-	                       response_handler_t handler = nullptr) = 0;
+	virtual result_t put(std::string url,
+	                     std::basic_istream<char>& body,
+	                     size_t bodysz = 0,
+	                     response_handler_t handler = nullptr) = 0;
 
 	/**@brief Can be used from another thread to cancel current operation.*/
-	virtual void cancel() = 0;
+	virtual void cancel(uint16_t code = 0, std::string message = "") = 0;
 
 	virtual ~transport() {}
 
@@ -70,4 +85,6 @@ protected:
 };
 
 } // namespace
+
+std::ostream& operator<<(std::ostream& os, const yandex::transport::result_t& rs);
 
