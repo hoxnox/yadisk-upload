@@ -14,40 +14,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef __LOGGING_GUARD__
-#define __LOGGING_GUARD__
+#pragma once
 
-#define ELPP_THREAD_SAFE
-#include <easylogging++.h>
+#ifndef ILOG
+#include <iostream>
+#endif
+
+namespace yandex {
+
+/**@brief Logging macro
+ *
+ * These should be redefined in client code*/
 
 #ifndef _
 #define _(X) (X)
 #endif
 
-void inline
-init_logging(int level)
-{
-	el::Loggers::addFlag(el::LoggingFlag::HierarchicalLogging);
-	el::Loggers::setLoggingLevel(el::Level::Fatal);
-	el::Loggers::reconfigureAllLoggers(el::ConfigurationType::Format,
-			"%levshort%datetime{%Y%M%dT%H%m%s} %msg");
-	if (level > 0)
-		el::Loggers::setLoggingLevel(el::Level::Trace);
-}
-
-#ifdef ILOG
-#undef ILOG
+#ifndef ILOG
+#define ILOG std::cout
 #endif
-#define ILOG LOG(INFO)
 
-#ifdef ELOG
-#undef ELOG
+#ifndef ELOG
+#define ELOG std::cout
 #endif
-#define ELOG LOG(ERROR)
 
-#ifdef VLOG
-#undef VLOG
+#ifndef VLOG
+#define VLOG std::cout
 #endif
-#define VLOG LOG(TRACE)
 
-#endif // __LOGGING_GUARD__
+} // namespace
+

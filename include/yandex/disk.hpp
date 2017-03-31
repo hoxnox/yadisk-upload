@@ -14,7 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "Logging.hpp"
+#pragma once
 
-INITIALIZE_EASYLOGGINGPP
+#include <memory>
 
+#include "transport.hpp"
+
+namespace yandex {
+namespace disk {
+
+class api
+{
+public:
+	api(std::string token);
+	api(std::shared_ptr<transport> cmd_transport);
+	~api();
+
+	/**@brief Upload file source into directory destination
+	 * @param destination directory on disk to upload
+	 * @param source file path on local machine
+	 * @note directories should exists*/
+	bool upload(std::string source, std::string destination);
+
+private:
+	struct api_impl_;
+	api_impl_* impl_;
+};
+
+
+}} // namespace

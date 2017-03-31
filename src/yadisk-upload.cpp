@@ -16,22 +16,28 @@ limitations under the License.
 
 #include <iostream>
 #include <docopt/docopt.h>
-#include "Logging.hpp"
+#include <logging.hpp>
+#include <yandex/disk.hpp>
 
 static const char USAGE[] =
 R"(Yandex disk uploader
 
 Usage:
-  yadisk-upload [-v] FILE
+  yadisk-upload [-v] [-a TOKEN] SOURCE DEST
   yadisk-upload -h | --version
 
 Arguments:
-  FILE to upload
+  SOURCE       file to upload
+  DESTINATION  destination directory path
 
 Options:
-  -v --verbose   Make a lot of noise
-  -h --help      Show help message
-  --version      Show version
+  -a TOKEN --auth=TOKEN  Authorization token
+  -v --verbose           Make a lot of noise
+  -h --help              Show help message
+  --version              Show version
+
+Examples:
+  yadisk-upload -a 0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f ~/my/file remote/dir
 )";
 
 struct Config
@@ -45,15 +51,21 @@ struct Config
 		{
 			if (arg.second)
 			{
-				if (arg.first == "--verbose")
-				{
-					if (arg.second.asBool())
-						verbose = true;
-				}
+				if (arg.first == "--verbose" && arg.second.asBool())
+					verbose = true;
+				else if (arg.first == "--auth")
+					auth = arg.second.asString();
+				else if (arg.first == "SOURCE")
+					source = arg.second.asString();
+				else if (arg.first == "DEST")
+					dest = arg.second.asString();
 			}
 		}
 	}
 	bool verbose{false};
+	std::string auth;
+	std::string source;
+	std::string dest;
 };
 
 int
@@ -62,6 +74,10 @@ main(int argc, char* argv[])
 	Config cfg;
 	cfg.ParseArgs(argc, argv);
 	init_logging(cfg.verbose ? 1 : 0);
+
+	yandex::disk::api disk_api(cfg.auth);
+	if (!disk_api.upload(cfg.source, cfg.dest))
+		return 1;
 
 	return 0;
 }

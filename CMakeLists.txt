@@ -17,24 +17,26 @@ cmake_minimum_required(VERSION 3.3.0)
 ########################################################################
 # options
 
-option(WITH_TESTS "Build tests."  OFF)
-option(WITH_DOCS  "Generate docs" OFF)
+option(WITH_TESTS          "Build tests."  OFF)
+option(WITH_DOCS           "Generate docs" OFF)
+option(WITH_SYSTEM_BOOST   "Don't build boost with the project" ON)
+option(WITH_SYSTEM_OPENSSL "Don't build openssl with the project" ON)
 
 ########################################################################
 # general
 
 project(yadisk-upload)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(yadisk_upload_VERSION_MAJOR 0)
 set(yadisk_upload_VERSION_MINOR 0)
-set(yadisk_upload_VERSION_PATCH 0)
+set(yadisk_upload_VERSION_PATCH 1)
 add_definitions("-DVERSION=\"${yadisk_upload_VERSION_MAJOR}.${yadisk_upload_VERSION_MINOR}.${yadisk_upload_VERSION_PATCH}\"")
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
                       "${PROJECT_SOURCE_DIR}/cmake/Modules")
 
-include_directories("${PROJECT_SOURCE_DIR}/src")
+include_directories("${PROJECT_SOURCE_DIR}/include")
 set(STAGING_DIR ${PROJECT_SOURCE_DIR}/build/staging)
 
 
@@ -45,18 +47,95 @@ else()
     set(LIBSUFFIX "")
 endif()
 
+include(Vendoring)
+include(ExternalProject)
+
 ########################################################################
-# tests and docs
+# threads
 
-if(WITH_DOCS)
-	add_subdirectory(doc)
+find_package(Threads REQUIRED)
+list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+
+#########################################################################
+#openssl
+
+if (WITH_SYSTEM_OPENSSL)
+	if(NOT OPENSSL_ROOT)
+		set(OPENSSL_ROOT $ENV{OPENSSL_ROOT})
+	endif()
+	find_package(OpenSSL REQUIRED)
+else()
+	set(OPENSSL_ROOT_DIR "${STAGING_DIR}")
+	set(OPENSSL_USE_STATIC_LIBS ON)
+	if (SECOND_PASS)
+		find_package(OpenSSL)
+	else()
+		sources_url(OPENSSL
+			"openssl/openssl/openssl-1.1.0c.tar.gz"
+			"https://www.openssl.org/source/openssl-1.1.0c.tar.gz")
+		ExternalProject_Add(openssl
+			URL ${OPENSSL_URL}
+			URL_HASH SHA256=fc436441a2e05752d31b4e46115eb89709a28aef96d4fe786abe92409b2fd6f5
+			CONFIGURE_COMMAND ./config --prefix=<INSTALL_DIR>
+			INSTALL_DIR "${STAGING_DIR}"
+			BUILD_IN_SOURCE 1
+			LOG_DOWNLOAD 1
+			LOG_UPDATE 1
+			LOG_CONFIGURE 1
+			LOG_BUILD 1
+			LOG_TEST 1
+			LOG_INSTALL 1
+		)
+		list(APPEND TOBUILD_DEPS openssl)
+	endif()
 endif()
 
-if(WITH_TESTS)
-	enable_testing()
-	add_subdirectory(test)
+if (OpenSSL_FOUND)
+	include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
+	list(APPEND LIBRARIES ${OPENSSL_LIBRARIES} dl z)
 endif()
 
+#########################################################################
+# boost
+
+if (WITH_SYSTEM_BOOST)
+	if(NOT BOOST_ROOT)
+		set(BOOST_ROOT $ENV{BOOST_ROOT})
+	endif()
+	find_package(Boost 1.47.0 COMPONENTS filesystem system REQUIRED)
+else()
+	set(Boost_ROOT "${STAGING_DIR}")
+	set(Boost_USE_STATIC_LIBS ON)
+	if (SECOND_PASS)
+		find_package(Boost 1.47.0 COMPONENST filesystem system REQUIRED)
+	else()
+		sources_url(BOOST
+			"boost.org/boost/boost_1_61_0.tar.gz"
+			"https://sourceforge.net/projects/boost/files/boost/1.61.0/boost_1_61_0.tar.gz/download")
+		ExternalProject_Add(boost
+			URL ${BOOST_URL}
+			DOWNLOAD_NAME boost_1_61_0.tar.gz
+			URL_HASH SHA256=a77c7cc660ec02704c6884fbb20c552d52d60a18f26573c9cee0788bf00ed7e6
+			CONFIGURE_COMMAND "./bootstrap.sh" --prefix=<INSTALL_DIR> --with-libraries=system,filesystem
+			BUILD_COMMAND "./b2" --ignore-site-config
+			INSTALL_COMMAND "./b2" --ignore-site-config install
+			BUILD_IN_SOURCE 1
+			INSTALL_DIR "${STAGING_DIR}"
+			LOG_DOWNLOAD 1
+			LOG_UPDATE 1
+			LOG_CONFIGURE 1
+			LOG_BUILD 1
+			LOG_TEST 1
+			LOG_INSTALL 1
+		)
+	endif()
+	list(APPEND TOBUILD_DEPS boost)
+endif()
+
+if (Boost_FOUND)
+	include_directories(BEFORE ${Boost_INCLUDE_DIRS})
+	list(APPEND LIBRARIES ${Boost_LIBRARIES})
+endif()
 
 ########################################################################
 # docopt
@@ -72,7 +151,6 @@ else()
 	sources_url(DOCOPT
 		"docopt/docopt.cpp/docopt.cpp-725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz"
 		"https://github.com/docopt/docopt.cpp/archive/725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz")
-	include(ExternalProject)
 	ExternalProject_Add(docopt
 		URL ${DOCOPT_URL}
 		DOWNLOAD_NAME docopt.cpp.tar.gz
@@ -107,7 +185,6 @@ else()
 	sources_url(EASYLOGGINGPP
 		"easylogging/easyloggingpp/easyloggingpp_v9.84.tar.gz"
 		"https://github.com/easylogging/easyloggingpp/releases/download/9.84/easyloggingpp_v9.84.tar.gz")
-	include(ExternalProject)
 	ExternalProject_Add(easyloggingpp
 		URL ${EASYLOGGINGPP_URL}
 		DOWNLOAD_NAME easyloggingpp_v9.84.tar.gz
@@ -126,7 +203,33 @@ else()
 	)
 	set(EASYLOGGINGPP_INCLUDE_DIR "${STAGING_DIR}/include")
 endif()
-list(APPEND INCLUDE_DIR "${EASYLOGGING_INCLUDE_DIR}")
+include_directories(BEFORE "${EASYLOGGINGPP_INCLUDE_DIR}")
+
+# replace logging.hpp
+set(LOGGING_REPLACEMENT_DIR "${PROJECT_BINARY_DIR}/log")
+configure_file("${PROJECT_SOURCE_DIR}/src/Logging.hpp" "${LOGGING_REPLACEMENT_DIR}/logging.hpp" COPYONLY)
+include_directories("${LOGGING_REPLACEMENT_DIR}")
+
+########################################################################
+
+if (TOBUILD_DEPS)
+	add_custom_target(build_dependencies ${CMAKE_COMMAND} -DSECOND_PASS=1 ${CMAKE_SOURCE_DIR} DEPENDS ${TOBUILD_DEPS})
+else()
+	add_custom_target(build_dependencies)
+endif()
+
+########################################################################
+# yandex api
+
+add_library(yandex_api
+	src/yandex/disk.cpp
+	src/yandex/tls_transport.cpp
+	src/yandex/transport.cpp)
+list(APPEND LIBRARIES yandex_api)
+
+target_include_directories(yandex_api PRIVATE "${LOGGING_REPLACEMENT_DIR}")
+target_include_directories(yandex_api BEFORE PUBLIC ${OPENSSL_INCLUDE_DIR})
+add_dependencies(yandex_api build_dependencies easyloggingpp)
 
 ########################################################################
 # yadisk-uplaod
@@ -134,9 +237,21 @@ list(APPEND INCLUDE_DIR "${EASYLOGGING_INCLUDE_DIR}")
 add_executable(yadisk-upload
 	src/yadisk-upload.cpp
 	src/Logging.cpp)
-add_dependencies(yadisk-upload docopt easyloggingpp)
+add_dependencies(yadisk-upload docopt yandex_api)
 target_link_libraries(yadisk-upload ${LIBRARIES})
 target_include_directories(yadisk-upload PRIVATE ${INCLUDE_DIR})
+
+########################################################################
+# tests and docs
+
+if(WITH_DOCS)
+	add_subdirectory(doc)
+endif()
+
+if(WITH_TESTS)
+	enable_testing()
+	add_subdirectory(test)
+endif()
 
 ########################################################################
 # installation
