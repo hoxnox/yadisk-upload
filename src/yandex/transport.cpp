@@ -25,7 +25,7 @@ operator<<(std::ostream& os, const yandex::transport::result_t& rs)
 	
 	if (rs.code() != 0)
 		os << _(" Code: ") << rs.code();
-	if (rs.message().empty())
+	if (!rs.message().empty())
 		os << _(" Message: ") << rs.message();
 
 	return os;
