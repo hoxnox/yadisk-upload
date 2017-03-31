@@ -23,7 +23,7 @@ static const char USAGE[] =
 R"(Yandex disk uploader
 
 Usage:
-  yadisk-upload [-v] SOURCE DEST
+  yadisk-upload [-v] [-a TOKEN] SOURCE DEST
   yadisk-upload -h | --version
 
 Arguments:

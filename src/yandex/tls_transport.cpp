@@ -101,7 +101,7 @@ tls_transport::tls_transport_impl_::parse_status(const char* status, size_t tota
 	const char* status_end = status;
 	while (status_end[0] != '\r' && status_end[1] != '\n' && status_end < status + totalsz)
 		++status_end;
-	std::regex rx_status = std::regex("^HTTP/1.??\\s+(\\d\\d\\d)\\s*(.*)$", std::regex::icase);
+	std::regex rx_status = std::regex("^HTTP/1.[012]+\\s+(\\d\\d\\d)\\s*(.*)$", std::regex::icase);
 	if (!std::regex_match(status, status_end, m, rx_status))
 	{
 		ELOG << _("Error parsing status line.")
@@ -216,6 +216,14 @@ tls_transport::put(std::string url,
                    size_t bodysz,
                    response_handler_t handler)
 {
+	if (bodysz == 0)
+	{
+		auto current_pos = body.tellg();
+		body.seekg(0, std::ios::end);
+		auto end_pos = body.tellg();
+		body.seekg(current_pos);
+		bodysz = end_pos - current_pos;
+	}
 	if (impl_->state == states::INPROGRESS)
 	{
 		VLOG << ("Attempt to call `get` with busy transport.");
@@ -233,8 +241,9 @@ tls_transport::put(std::string url,
 	    << "Host: " << impl_->host << "\r\n"
 	    << "User-Agent: hoxnox/yadisk-upload\r\n"
 	       "Accept: */*\r\n"
-	       "Content-Length: 4\r\n"
+	       "Content-Length: " << bodysz << "\r\n"
 	       "Content-Type: application/octet-stream\r\n\r\n";
+	VLOG << "Sending request.\n" << req.str();
 	rs = write(impl_->sock, buffer(req.str().c_str(), req.str().length()), err);
 	if (err)
 	{
@@ -255,6 +264,7 @@ tls_transport::put(std::string url,
 		if (body.gcount() == 0)
 			break;
 		data_read += body.gcount();
+		VLOG << "Sending request.\n" << std::string(impl_->io_buf.begin(), impl_->io_buf.end());
 		rs = write(impl_->sock, buffer(impl_->io_buf.data(), body.gcount()), err);
 		if (err)
 		{

@@ -68,7 +68,7 @@ TEST_F(TestYandexDisk, upload_bad_destination)
 	write_file(tmpdir_/"source", {0x01, 0x02, 0x03, 0x04});
 	EXPECT_FALSE(api->upload((tmpdir_/"source").string(), "bad"));
 	transport_mock* t = dynamic_cast<transport_mock*>(transport.get());
-	EXPECT_EQ("Error getting upload URL. Transport operation was failed. Code: 501 Message: Bad path.\n", errlog.str());
+	EXPECT_EQ("Error receiving GET response. Transport operation was failed. Code: 501 Message: Bad path.\n", errlog.str());
 	errlog.str("");
 	EXPECT_NE(0, transport_mock::cmd.size());
 }

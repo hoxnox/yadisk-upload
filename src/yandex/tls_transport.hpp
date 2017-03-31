@@ -24,7 +24,7 @@ class tls_transport : public transport
 {
 public:
 	tls_transport(std::string token = "",
-	              std::string host = "cloud.yandex.net",
+	              std::string host = "cloud-api.yandex.net",
 	              uint16_t port = 443,
 	              bool dont_verify = false);
 	~tls_transport();

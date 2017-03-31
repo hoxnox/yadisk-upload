@@ -75,16 +75,6 @@ url_encode(std::string str)
 	return rs.str();
 }
 
-inline const uint8_t*
-find_response_body(const uint8_t* begin, const uint8_t* end)
-{
-	const uint8_t body_end[] = {'\r', '\n', '\r', '\n'};
-	const uint8_t* rs = std::search(begin, end, body_end, body_end + sizeof(body_end));
-	if (rs == end)
-		return end;
-	return rs + 4;
-}
-
 template<class InIter> inline InIter
 check_prefix(InIter begin, InIter end, std::string prefix)
 {
@@ -94,7 +84,6 @@ check_prefix(InIter begin, InIter end, std::string prefix)
 		return begin + prefix.length();
 	return end;
 }
-
 
 class url_t
 {
@@ -148,6 +137,50 @@ public:
 	uint16_t port;
 };
 
+template<class InIter> inline std::string
+bytes2str(InIter begin, InIter end)
+{
+	std::string rs;
+	while (begin != end)
+		rs += hex(*begin++);
+	return rs;
+}
+
+inline const uint8_t*
+find_response_body(const uint8_t* begin, const uint8_t* end)
+{
+	const uint8_t body_end[] = {'\r', '\n', '\r', '\n'};
+	const uint8_t* rs = std::search(begin, end, body_end, body_end + sizeof(body_end));
+	if (rs == end)
+		return end;
+	return rs + 4;
+}
+
+template<class InIter> inline InIter
+find_response_body(InIter begin, InIter end)
+{
+	const uint8_t body_end[] = {'\r', '\n', '\r', '\n'};
+	InIter rs = std::search(begin, end, body_end, body_end + sizeof(body_end));
+	if (rs == end)
+		return end;
+	return rs + 4;
+}
+
+inline std::string
+fetch_upload_url(std::string str)
+{
+	auto pos = str.begin();
+	auto end = str.end();
+	if ((pos = find_response_body(pos, end)) == end)
+		return {};
+	if ((pos = check_prefix(pos, end, "{\"href\":\"")) == end)
+		return {};
+	auto href_end = std::find(pos, end, '\"');
+	if (href_end == end)
+		return {};
+	 return {pos, href_end};
+}
+
 /**@note Don't escape special symbols in parameters. Use UTF-8.*/
 bool
 api::upload(std::string source, std::string destination)
@@ -160,28 +193,25 @@ api::upload(std::string source, std::string destination)
 		     << _(" Filename: \"") << fs_source.string() << "\"";
 		return false;
 	}
-	std::string upload_url;
+	std::string raw_response;
 	std::string url = "/v1/disk/resources/upload?path=" + url_encode(destination);
 	auto rs = impl_->cmd_transport->get("/v1/disk/resources/upload?path=" + url_encode(destination),
-			[&upload_url, &url](const std::string& url_, const uint8_t* pos, size_t datasz)
+			[&raw_response, &url](const std::string& url_, const uint8_t* data, size_t datasz)
 			{
-				if (!upload_url.empty() || url != url_)
-					return;
-				const uint8_t* end = pos + datasz;
-				if ((pos = find_response_body(pos, end)) == end)
-					return;
-				if ((pos = check_prefix(pos, end, "{\"href\":\"")) == end)
-					return;
-				const uint8_t* href_end = std::find(pos, end, '\"');
-				if (href_end == end)
-					return;
-				upload_url = std::string(pos, href_end);
+				if (url == url_)
+					raw_response += std::string(data, data + datasz);
 			});
-	if (!rs || upload_url.empty())
+	if (!rs || raw_response.empty())
 	{
-		ELOG << _("Error getting upload URL. ") << rs;
+		ELOG << _("Error receiving GET response. ") << rs;
 		return false;
 	}
+	VLOG << _("Successful executed request for put data.")
+	     << _(" Raw: ") << raw_response;
+	std::string upload_url = fetch_upload_url(raw_response);
+	if (upload_url.empty())
+		return false;
+	VLOG << _("URL fetched. Parsing. ") << upload_url;
 	auto parsed_upload_url = url_t::from_string(upload_url);
 	if (parsed_upload_url)
 	{
