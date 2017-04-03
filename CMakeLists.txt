@@ -32,7 +32,6 @@ set(yadisk_upload_VERSION_MAJOR 0)
 set(yadisk_upload_VERSION_MINOR 0)
 set(yadisk_upload_VERSION_PATCH 1)
 add_definitions("-DVERSION=\"${yadisk_upload_VERSION_MAJOR}.${yadisk_upload_VERSION_MINOR}.${yadisk_upload_VERSION_PATCH}\"")
-
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
                       "${PROJECT_SOURCE_DIR}/cmake/Modules")
 
@@ -54,7 +53,7 @@ include(ExternalProject)
 # threads
 
 find_package(Threads REQUIRED)
-list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
 
 #########################################################################
 # openssl
@@ -147,8 +146,8 @@ else()
 			DOWNLOAD_NAME boost_1_61_0.tar.gz
 			URL_HASH SHA256=a77c7cc660ec02704c6884fbb20c552d52d60a18f26573c9cee0788bf00ed7e6
 			CONFIGURE_COMMAND "./bootstrap.sh" --prefix=<INSTALL_DIR> --with-libraries=system,filesystem
-			BUILD_COMMAND "./b2" --ignore-site-config
-			INSTALL_COMMAND "./b2" --ignore-site-config install
+			BUILD_COMMAND ""
+			INSTALL_COMMAND "./b2" link=static threading=multi --ignore-site-config install
 			BUILD_IN_SOURCE 1
 			INSTALL_DIR "${STAGING_DIR}"
 			LOG_DOWNLOAD 1
@@ -254,7 +253,7 @@ add_library(yandex_api
 	src/yandex/disk.cpp
 	src/yandex/tls_transport.cpp
 	src/yandex/transport.cpp)
-list(APPEND LIBRARIES yandex_api)
+list(INSERT LIBRARIES 0 yandex_api)
 
 target_include_directories(yandex_api PRIVATE "${LOGGING_REPLACEMENT_DIR}")
 target_include_directories(yandex_api BEFORE PUBLIC ${OPENSSL_INCLUDE_DIR})
