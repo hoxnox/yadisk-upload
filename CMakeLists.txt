@@ -30,9 +30,8 @@ project(yadisk-upload)
 set(CMAKE_CXX_STANDARD 14)
 set(yadisk_upload_VERSION_MAJOR 0)
 set(yadisk_upload_VERSION_MINOR 0)
-set(yadisk_upload_VERSION_PATCH 1)
+set(yadisk_upload_VERSION_PATCH 2)
 add_definitions("-DVERSION=\"${yadisk_upload_VERSION_MAJOR}.${yadisk_upload_VERSION_MINOR}.${yadisk_upload_VERSION_PATCH}\"")
-
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
                       "${PROJECT_SOURCE_DIR}/cmake/Modules")
 
@@ -54,10 +53,10 @@ include(ExternalProject)
 # threads
 
 find_package(Threads REQUIRED)
-list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
 
 #########################################################################
-#openssl
+# openssl
 
 if (WITH_SYSTEM_OPENSSL)
 	if(NOT OPENSSL_ROOT)
@@ -65,18 +64,42 @@ if (WITH_SYSTEM_OPENSSL)
 	endif()
 	find_package(OpenSSL REQUIRED)
 else()
+
+	set(ZLIB_ROOT "${STAGING_DIR}")
+	if (SECOND_PASS)
+		find_package(ZLIB)
+	else()
+		sources_url(ZLIB
+			"zlib.net/zlib/zlib-1.2.11.tar.gz"
+			"http://zlib.net/zlib-1.2.11.tar.gz")
+		ExternalProject_Add(zlib
+			URL ${ZLIB_URL}
+			URL_HASH SHA256=c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1
+			CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR> --static
+			INSTALL_DIR "${STAGING_DIR}"
+			BUILD_IN_SOURCE 1
+			LOG_DOWNLOAD 1
+			LOG_UPDATE 1
+			LOG_CONFIGURE 1
+			LOG_BUILD 1
+			LOG_TEST 1
+			LOG_INSTALL 1
+		)
+		list(APPEND TOBUILD_DEPS zlib)
+	endif()
+
 	set(OPENSSL_ROOT_DIR "${STAGING_DIR}")
 	set(OPENSSL_USE_STATIC_LIBS ON)
 	if (SECOND_PASS)
 		find_package(OpenSSL)
 	else()
 		sources_url(OPENSSL
-			"openssl/openssl/openssl-1.1.0c.tar.gz"
-			"https://www.openssl.org/source/openssl-1.1.0c.tar.gz")
+			"openssl/openssl/openssl-1.0.1t.tar.gz"
+			"https://www.openssl.org/source/openssl-1.0.1t.tar.gz")
 		ExternalProject_Add(openssl
 			URL ${OPENSSL_URL}
-			URL_HASH SHA256=fc436441a2e05752d31b4e46115eb89709a28aef96d4fe786abe92409b2fd6f5
-			CONFIGURE_COMMAND ./config --prefix=<INSTALL_DIR>
+			URL_HASH SHA256=4a6ee491a2fdb22e519c76fdc2a628bb3cec12762cd456861d207996c8a07088
+			CONFIGURE_COMMAND ./config --prefix=<INSTALL_DIR> no-shared no-zlib
 			INSTALL_DIR "${STAGING_DIR}"
 			BUILD_IN_SOURCE 1
 			LOG_DOWNLOAD 1
@@ -88,11 +111,17 @@ else()
 		)
 		list(APPEND TOBUILD_DEPS openssl)
 	endif()
+
+endif()
+
+if (ZLIB_FOUND)
+	include_directories(BEFORE ${ZLIB_INCLUDE_DIR})
+	list(APPEND LIBRARIES ${ZLIB_LIBRARIES})
 endif()
 
 if (OpenSSL_FOUND)
 	include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
-	list(APPEND LIBRARIES ${OPENSSL_LIBRARIES} dl z)
+	list(APPEND LIBRARIES ${OPENSSL_LIBRARIES})
 endif()
 
 #########################################################################
@@ -104,10 +133,10 @@ if (WITH_SYSTEM_BOOST)
 	endif()
 	find_package(Boost 1.47.0 COMPONENTS filesystem system REQUIRED)
 else()
-	set(Boost_ROOT "${STAGING_DIR}")
+	set(BOOST_ROOT "${STAGING_DIR}")
 	set(Boost_USE_STATIC_LIBS ON)
 	if (SECOND_PASS)
-		find_package(Boost 1.47.0 COMPONENST filesystem system REQUIRED)
+		find_package(Boost 1.47.0 COMPONENTS filesystem system REQUIRED)
 	else()
 		sources_url(BOOST
 			"boost.org/boost/boost_1_61_0.tar.gz"
@@ -117,8 +146,8 @@ else()
 			DOWNLOAD_NAME boost_1_61_0.tar.gz
 			URL_HASH SHA256=a77c7cc660ec02704c6884fbb20c552d52d60a18f26573c9cee0788bf00ed7e6
 			CONFIGURE_COMMAND "./bootstrap.sh" --prefix=<INSTALL_DIR> --with-libraries=system,filesystem
-			BUILD_COMMAND "./b2" --ignore-site-config
-			INSTALL_COMMAND "./b2" --ignore-site-config install
+			BUILD_COMMAND ""
+			INSTALL_COMMAND "./b2" link=static threading=multi --ignore-site-config install
 			BUILD_IN_SOURCE 1
 			INSTALL_DIR "${STAGING_DIR}"
 			LOG_DOWNLOAD 1
@@ -128,8 +157,8 @@ else()
 			LOG_TEST 1
 			LOG_INSTALL 1
 		)
+		list(APPEND TOBUILD_DEPS boost)
 	endif()
-	list(APPEND TOBUILD_DEPS boost)
 endif()
 
 if (Boost_FOUND)
@@ -170,7 +199,6 @@ else()
 endif()
 list(APPEND INCLUDE_DIR "${DOCOPT_INCLUDE_DIR}")
 list(APPEND LIBRARIES "${DOCOPT_LIBRARIES}")
-
 
 ########################################################################
 # easyloggingpp
@@ -225,7 +253,7 @@ add_library(yandex_api
 	src/yandex/disk.cpp
 	src/yandex/tls_transport.cpp
 	src/yandex/transport.cpp)
-list(APPEND LIBRARIES yandex_api)
+list(INSERT LIBRARIES 0 yandex_api)
 
 target_include_directories(yandex_api PRIVATE "${LOGGING_REPLACEMENT_DIR}")
 target_include_directories(yandex_api BEFORE PUBLIC ${OPENSSL_INCLUDE_DIR})
