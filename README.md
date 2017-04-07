@@ -1,6 +1,8 @@
 # Yandex disk file upload utility
 
-Uploads files to yandex disk.
+Uploads files to yandex disk. Doesn't use curl. Extremely fast and low
+memory consuming. Authentication by token - doesn't need user/password
+with full access to the profile.
 
 ## examples
 
