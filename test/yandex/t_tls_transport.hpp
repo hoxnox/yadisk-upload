@@ -88,9 +88,9 @@ TEST_F(TestTlsTransport, put)
 	          "Host: 127.0.0.241\r\n"
 	          "User-Agent: hoxnox/yadisk-upload\r\n"
 	          "Accept: */*\r\n"
-	          "Content-Length: 4\r\n"
+	          "Connection: keep-alive\r\n"
+	          "Transfer-Encoding: chunked\r\n"
 	          "Content-Type: application/octet-stream\r\n\r\n"
-	          "DATA"
 	          , std::string(buf.begin(), buf.end()));
 	EXPECT_LT(0, callback_called_count);
 }

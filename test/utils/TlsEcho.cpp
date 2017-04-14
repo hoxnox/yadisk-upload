@@ -128,22 +128,38 @@ TlsEcho::TlsEcho(std::string addr,
 			const char* headers_data = buffer_cast<const char*>(buf.data());
 			size_t  headers_sz = buf.size();
 			std::match_results<const char*> m;
-			std::regex rx = std::regex("content-length:\\s*(\\d+)", std::regex::icase);
+			std::regex rx = std::regex("transfer-encoding: chunked\r\n", std::regex::icase);
 			if (std::regex_search(headers_data, headers_data + headers_sz, m, rx))
 			{
-				size_t content_length = boost::lexical_cast<size_t>(m[1]);
-				VLOG << _("TlsEcho meet content length header.")
-				     << _(" Fetched size: ") << content_length;
-				rs += read(*sock_, buf, transfer_exactly(content_length), err);
+				rs += read_until(*sock_, buf, "0\r\n\r\n", err);
+				//int rs = sock_->read_some(buffer(buf.data(), buf.capacity()), err);
 				if (err)
 				{
 					ELOG << _("TlsEcho read_some error.")
 					     << _(" Message: ") << err.message();
 					return;
 				}
-				VLOG << _("TlsEcho have read data.") << _(" Total size: ") << rs;
+				VLOG << _("Read chunked data.");
+			}
+			else
+			{
+				std::regex rx = std::regex("content-length:\\s*(\\d+)", std::regex::icase);
+				if (std::regex_search(headers_data, headers_data + headers_sz, m, rx))
+				{
+					size_t content_length = boost::lexical_cast<size_t>(m[1]);
+					VLOG << _("TlsEcho meet content length header.")
+					     << _(" Fetched size: ") << content_length;
+					rs += read(*sock_, buf, transfer_exactly(content_length), err);
+					if (err)
+					{
+						ELOG << _("TlsEcho read_some error.")
+						     << _(" Message: ") << err.message();
+						return;
+					}
+				}
 			}
 
+			VLOG << _("TlsEcho have read data.") << _(" Total size: ") << rs;
 			VLOG << _("TlsEcho mirroring.");
 
 			rs = write(*sock_, buf, err);

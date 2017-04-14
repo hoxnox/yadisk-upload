@@ -65,7 +65,7 @@ public:
 	}
 
 	std::shared_ptr<transport>
-		make_transport(std::string host, uint16_t port) override
+		make_transport(std::string host, uint16_t port, size_t chunksz = 0) override
 			{ return std::make_shared<transport_mock>(); }
 
 	enum class methods : uint8_t

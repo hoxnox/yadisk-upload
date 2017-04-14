@@ -16,6 +16,7 @@ limitations under the License.
 
 #pragma once
 
+#include <functional>
 #include <memory>
 
 #include "transport.hpp"
@@ -30,11 +31,17 @@ public:
 	api(std::shared_ptr<transport> cmd_transport);
 	~api();
 
-	/**@brief Upload file source into directory destination
-	 * @param destination directory on disk to upload
+	/**@brief Upload file source into destination
+	 * @param destination file name on disk
 	 * @param source file path on local machine
+	 * @param chunksz - size of chunk in chunk-encoding (default to 1024*1024)
 	 * @note directories should exists*/
-	bool upload(std::string source, std::string destination);
+	bool upload(std::string source, std::string destination, size_t chunksz = 0);
+	/**@brief Uploads data from input stream.
+	 * @param size - how many bytes to read from the stream. In case of
+	 * @param chunksz - size of chunk in chunk-encoding (default to 1024*1024)
+	 * zero - read while strm->good()*/
+	bool upload(std::string destination, std::istream& strm, size_t datasz = 0, size_t chunksz = 0);
 
 private:
 	struct api_impl_;
