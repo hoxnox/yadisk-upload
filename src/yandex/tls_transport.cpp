@@ -19,6 +19,7 @@ limitations under the License.
 #include <sstream>
 #include <regex>
 #include <iostream>
+#include <iomanip>
 
 #include "tls_transport.hpp"
 #include <logging.hpp>
@@ -54,11 +55,17 @@ struct tls_transport::tls_transport_impl_
 };
 
 
-tls_transport::tls_transport(std::string token, std::string host, uint16_t port, bool dont_verify)
+tls_transport::tls_transport(std::string token,
+                             std::string host,
+                             uint16_t port,
+                             bool dont_verify,
+                             size_t chunksz)
 	: transport(token, host)
 	, impl_(new tls_transport_impl_)
 	, token_(token)
 {
+	if (chunksz != 0)
+		impl_->io_bufsz = chunksz;
 	impl_->host  = host;
 	impl_->io_buf.reserve(impl_->io_bufsz);
 	try
@@ -216,14 +223,6 @@ tls_transport::put(std::string url,
                    size_t bodysz,
                    response_handler_t handler)
 {
-	if (bodysz == 0)
-	{
-		auto current_pos = body.tellg();
-		body.seekg(0, std::ios::end);
-		auto end_pos = body.tellg();
-		body.seekg(current_pos);
-		bodysz = end_pos - current_pos;
-	}
 	if (impl_->state == states::INPROGRESS)
 	{
 		VLOG << ("Attempt to call `get` with busy transport.");
@@ -236,13 +235,16 @@ tls_transport::put(std::string url,
 	}
 	boost::system::error_code err;
 	int rs;
+
 	std::stringstream req;
 	req << "PUT " << url << " HTTP/1.1\r\n"
 	    << "Host: " << impl_->host << "\r\n"
 	    << "User-Agent: hoxnox/yadisk-upload\r\n"
-	       "Accept: */*\r\n"
-	       "Content-Length: " << bodysz << "\r\n"
-	       "Content-Type: application/octet-stream\r\n\r\n";
+	    << "Accept: */*\r\n"
+	    << "Connection: keep-alive\r\n"
+	    << "Transfer-Encoding: chunked\r\n"
+	    << "Content-Type: application/octet-stream\r\n";
+
 	VLOG << "Sending request.\n" << req.str();
 	rs = write(impl_->sock, buffer(req.str().c_str(), req.str().length()), err);
 	if (err)
@@ -264,17 +266,41 @@ tls_transport::put(std::string url,
 		if (body.gcount() == 0)
 			break;
 		data_read += body.gcount();
-		VLOG << "Sending request.\n" << std::string(impl_->io_buf.begin(), impl_->io_buf.end());
-		rs = write(impl_->sock, buffer(impl_->io_buf.data(), body.gcount()), err);
-		if (err)
+		std::stringstream length;
+		length << "\r\n" << std::hex << body.gcount() << "\r\n";
+		rs = write(impl_->sock, buffer(length.str().c_str(), length.str().length()), err);
+		if (err || rs != length.str().length())
 		{
-			ELOG << _("Error writing PUT data.")
+			ELOG << _("Error putting chunk length.")
+				 << _(" rs: ") << rs
+				 << _(" attempt to send: ") << length.str().length()
 			     << _(" URL: ") << url
 			     << _(" Message: ") << err.message();
 			return result_t::FAILED;
 		}
-		VLOG << _("Send PUT data portion.")
+		rs = write(impl_->sock, buffer(impl_->io_buf.data(), body.gcount()), err);
+		if (err || rs != body.gcount())
+		{
+			ELOG << _("Error putting data chunk.")
+				 << _(" rs: ") << rs
+				 << _(" attempt to send: ") << body.gcount()
+			     << _(" URL: ") << url
+			     << _(" Message: ") << err.message();
+			return result_t::FAILED;
+		}
+		VLOG << _("Sent PUT data portion.")
 		     << _(" Size: ") << rs;
+	}
+	const std::string end_of_stream("\r\n0\r\n\r\n");
+	rs = write(impl_->sock, buffer(end_of_stream.c_str(), end_of_stream.length()), err);
+	if (err || rs != end_of_stream.length())
+	{
+		ELOG << _("Error putting chunk length.")
+			 << _(" rs: ") << rs
+			 << _(" attempt to send: ") << body.gcount()
+		     << _(" URL: ") << url
+		     << _(" Message: ") << err.message();
+		return result_t::FAILED;
 	}
 
 	return impl_->read_response(url, handler);

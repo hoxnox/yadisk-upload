@@ -26,7 +26,8 @@ public:
 	tls_transport(std::string token = "",
 	              std::string host = "cloud-api.yandex.net",
 	              uint16_t port = 443,
-	              bool dont_verify = false);
+	              bool dont_verify = false,
+	              size_t chunksz = 0);
 	~tls_transport();
 	/**@brief perform HTTP GET request*/
 	result_t get(std::string url, response_handler_t handler = nullptr) override;
@@ -39,8 +40,8 @@ public:
 	void cancel(uint16_t code = 0, std::string message = "") override;
 
 	std::shared_ptr<transport>
-		make_transport(std::string host, uint16_t port) override
-			{ return std::make_shared<tls_transport>(token_, host, port); }
+		make_transport(std::string host, uint16_t port, size_t chunksz = 0) override
+			{ return std::make_shared<tls_transport>(token_, host, port, chunksz); }
 
 private:
 	class tls_transport_impl_;

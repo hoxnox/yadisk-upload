@@ -26,8 +26,11 @@ limitations under the License.
 namespace yandex {
 namespace disk {
 
+class url_t;
+
 struct api::api_impl_
 {
+	url_t get_upload_url(const std::string& destination);
 	std::shared_ptr<transport> cmd_transport{nullptr};
 };
 
@@ -130,7 +133,7 @@ public:
 		return ss.str();
 	}
 
-	operator bool() { return host.empty(); }
+	operator bool() { return !host.empty(); }
 
 	std::string host;
 	std::string suffix;
@@ -173,17 +176,55 @@ fetch_upload_url(std::string str)
 	auto end = str.end();
 	if ((pos = find_response_body(pos, end)) == end)
 		return {};
-	if ((pos = check_prefix(pos, end, "{\"href\":\"")) == end)
+	std::string link_prefix = "\"href\":\"";
+	if ((pos = std::search(pos, end, link_prefix.begin(), link_prefix.end())) == end)
 		return {};
+	pos += link_prefix.length();
 	auto href_end = std::find(pos, end, '\"');
 	if (href_end == end)
 		return {};
 	 return {pos, href_end};
 }
 
+url_t
+api::api_impl_::get_upload_url(const std::string& destination)
+{
+	std::string raw_response;
+	std::string url = "/v1/disk/resources/upload?path=" + url_encode(destination);
+	auto rs = cmd_transport->get("/v1/disk/resources/upload?path=" + url_encode(destination),
+			[&raw_response, &url](const std::string& url_, const uint8_t* data, size_t datasz)
+			{
+				if (url == url_)
+					raw_response += std::string(data, data + datasz);
+			});
+	if (!rs || raw_response.empty())
+	{
+		ELOG << _("Error receiving GET response. ") << rs;
+		return {};
+	}
+	VLOG << _("Successful executed GET request for put data.")
+	     << _(" Raw: ") << raw_response;
+	std::string upload_url = fetch_upload_url(raw_response);
+	if (upload_url.empty())
+	{
+		ELOG << _("Error fetching upload URL.");
+		return {};
+	}
+	VLOG << _("URL fetched. Parsing. ") << upload_url;
+	auto parsed_upload_url = url_t::from_string(upload_url);
+	if (!parsed_upload_url)
+	{
+		ELOG << _("Error parsing upload URL.")
+		     << _(" URL: ") << upload_url;
+		return {};
+	}
+	VLOG << ("Got upload url. ") << parsed_upload_url.str();
+	return parsed_upload_url;
+}
+
 /**@note Don't escape special symbols in parameters. Use UTF-8.*/
 bool
-api::upload(std::string source, std::string destination)
+api::upload(std::string source, std::string destination, size_t chunksz)
 {
 	boost::filesystem::path fs_source(source);
 	std::ifstream ifile(fs_source.string().c_str(), std::ios::binary);
@@ -193,37 +234,18 @@ api::upload(std::string source, std::string destination)
 		     << _(" Filename: \"") << fs_source.string() << "\"";
 		return false;
 	}
-	std::string raw_response;
-	std::string url = "/v1/disk/resources/upload?path=" + url_encode(destination);
-	auto rs = impl_->cmd_transport->get("/v1/disk/resources/upload?path=" + url_encode(destination),
-			[&raw_response, &url](const std::string& url_, const uint8_t* data, size_t datasz)
-			{
-				if (url == url_)
-					raw_response += std::string(data, data + datasz);
-			});
-	if (!rs || raw_response.empty())
-	{
-		ELOG << _("Error receiving GET response. ") << rs;
-		return false;
-	}
-	VLOG << _("Successful executed request for put data.")
-	     << _(" Raw: ") << raw_response;
-	std::string upload_url = fetch_upload_url(raw_response);
-	if (upload_url.empty())
-		return false;
-	VLOG << _("URL fetched. Parsing. ") << upload_url;
-	auto parsed_upload_url = url_t::from_string(upload_url);
-	if (parsed_upload_url)
-	{
-		ELOG << _("Error parsing upload URL.")
-		     << _(" URL: ") << upload_url;
-		return false;
-	}
-	VLOG << ("Got upload url. ") << parsed_upload_url.str();
+	return upload(destination, ifile, chunksz);
+}
 
-	auto put_transport = impl_->cmd_transport->make_transport(
-			parsed_upload_url.host, parsed_upload_url.port);
-	rs = put_transport->put(parsed_upload_url.suffix, ifile);
+bool
+api::upload(std::string destination, std::istream& strm, size_t size, size_t chunksz)
+{
+	auto url = impl_->get_upload_url(destination);
+	if (!url)
+		return false;
+
+	auto put_transport = impl_->cmd_transport->make_transport(url.host, url.port, chunksz);
+	auto rs = put_transport->put(url.suffix, strm, size);
 	if (!rs)
 	{
 		ELOG << _("Error putting. ") << rs;

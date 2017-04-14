@@ -81,9 +81,10 @@ public:
 
 	virtual ~transport() {}
 
-	/**@brief Create new transport with the same type.*/
+	/**@brief Create new transport with the same type.
+	 * @param chunksz if not zero, prepare chunked transport*/
 	virtual std::shared_ptr<transport>
-		make_transport(std::string host, uint16_t port) = 0;
+		make_transport(std::string host, uint16_t port, size_t chunksz = 0) = 0;
 
 protected:
 	std::string token_;
