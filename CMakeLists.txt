@@ -23,6 +23,7 @@ option(WITH_SYSTEM_BOOST   "Don't build boost with the project" ON)
 option(WITH_SYSTEM_OPENSSL "Don't build openssl with the project" ON)
 option(WITH_TOOLS          "Build yadisk-upload executable" ON)
 option(WITH_LIBS           "Install libraries" OFF)
+option(WITH_LOG            "Logging replacement" "")
 
 ########################################################################
 # general
@@ -96,11 +97,11 @@ else()
 		find_package(OpenSSL)
 	else()
 		sources_url(OPENSSL
-			"openssl/openssl/openssl-1.0.1t.tar.gz"
-			"https://www.openssl.org/source/openssl-1.0.1t.tar.gz")
+			"openssl/openssl/openssl-1.1.0c.tar.gz"
+			"https://www.openssl.org/source/openssl-1.1.0c.tar.gz")
 		ExternalProject_Add(openssl
 			URL ${OPENSSL_URL}
-			URL_HASH SHA256=4a6ee491a2fdb22e519c76fdc2a628bb3cec12762cd456861d207996c8a07088
+			URL_HASH SHA256=fc436441a2e05752d31b4e46115eb89709a28aef96d4fe786abe92409b2fd6f5
 			CONFIGURE_COMMAND ./config --prefix=<INSTALL_DIR> no-shared no-zlib
 			INSTALL_DIR "${STAGING_DIR}"
 			BUILD_IN_SOURCE 1
@@ -138,7 +139,7 @@ else()
 	set(BOOST_ROOT "${STAGING_DIR}")
 	set(Boost_USE_STATIC_LIBS ON)
 	if (SECOND_PASS)
-		find_package(Boost 1.47.0 COMPONENTS filesystem system REQUIRED)
+		find_package(Boost 1.63.0 COMPONENTS filesystem system REQUIRED)
 	else()
 		sources_url(BOOST
 			"boost.org/boost/boost_1_63_0.tar.gz"
@@ -171,74 +172,94 @@ endif()
 ########################################################################
 # docopt
 
-if (WITH_SYSTEM_DOCOPT)
-	set(DOCOPT_USE_STATIC_LIBS ON)
-	if(NOT DOCOPT_ROOT)
-		set(DOCOPT_ROOT $ENV{DOCOPT_ROOT})
+if (WITH_TOOLS)
+	if (WITH_SYSTEM_DOCOPT)
+		set(DOCOPT_USE_STATIC_LIBS ON)
+		if(NOT DOCOPT_ROOT)
+			set(DOCOPT_ROOT $ENV{DOCOPT_ROOT})
+		endif()
+		find_package(Docopt REQUIRED)
+		add_custom_target(docopt)
+	else()
+		sources_url(DOCOPT
+			"docopt/docopt.cpp/docopt.cpp-725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz"
+			"https://github.com/docopt/docopt.cpp/archive/725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz")
+		ExternalProject_Add(docopt
+			URL ${DOCOPT_URL}
+			DOWNLOAD_NAME docopt.cpp.tar.gz
+			URL_HASH SHA256=cc340fce5c6694c5d1ae0bf999c5134e46bc06bc00fd4e7be1790d40697f807a
+			CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DCMAKE_BUILD_TYPE=Release
+			BUILD_IN_SOURCE 1
+			INSTALL_DIR "${STAGING_DIR}"
+			LOG_DOWNLOAD 1
+			LOG_UPDATE 1
+			LOG_CONFIGURE 1
+			LOG_BUILD 1
+			LOG_TEST 1
+			LOG_INSTALL 1
+		)
+		set(DOCOPT_LIBRARIES ${STAGING_DIR}/lib${LIBSUFFIX}/libdocopt.a)
+		set(DOCOPT_INCLUDE_DIR ${STAGING_DIR}/include)
 	endif()
-	find_package(Docopt REQUIRED)
-	add_custom_target(docopt)
-else()
-	sources_url(DOCOPT
-		"docopt/docopt.cpp/docopt.cpp-725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz"
-		"https://github.com/docopt/docopt.cpp/archive/725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz")
-	ExternalProject_Add(docopt
-		URL ${DOCOPT_URL}
-		DOWNLOAD_NAME docopt.cpp.tar.gz
-		URL_HASH SHA256=cc340fce5c6694c5d1ae0bf999c5134e46bc06bc00fd4e7be1790d40697f807a
-		CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DCMAKE_BUILD_TYPE=Release
-		BUILD_IN_SOURCE 1
-		INSTALL_DIR "${STAGING_DIR}"
-		LOG_DOWNLOAD 1
-		LOG_UPDATE 1
-		LOG_CONFIGURE 1
-		LOG_BUILD 1
-		LOG_TEST 1
-		LOG_INSTALL 1
-	)
-	set(DOCOPT_LIBRARIES ${STAGING_DIR}/lib${LIBSUFFIX}/libdocopt.a)
-	set(DOCOPT_INCLUDE_DIR ${STAGING_DIR}/include)
+	list(APPEND INCLUDE_DIR "${DOCOPT_INCLUDE_DIR}")
+	list(APPEND LIBRARIES "${DOCOPT_LIBRARIES}")
 endif()
-list(APPEND INCLUDE_DIR "${DOCOPT_INCLUDE_DIR}")
-list(APPEND LIBRARIES "${DOCOPT_LIBRARIES}")
-
+	
 ########################################################################
 # easyloggingpp
 
-if (WITH_SYSTEM_EASYLOGGINGPP)
-	if(NOT EASYLOGGINGPP_ROOT)
-		set(EASYLOGGINGPP_ROOT $ENV{EASYLOGGINGPP_ROOT})
+if (NOT WITH_LOG)
+	if (WITH_SYSTEM_EASYLOGGINGPP)
+		if(NOT EASYLOGGINGPP_ROOT)
+			set(EASYLOGGINGPP_ROOT $ENV{EASYLOGGINGPP_ROOT})
+		endif()
+		find_package(EASYLOGGINGPP REQUIRED)
+		add_custom_target(easyloggingpp)
+	else()
+		sources_url(EASYLOGGINGPP
+			"easylogging/easyloggingpp/easyloggingpp_v9.84.tar.gz"
+			"https://github.com/easylogging/easyloggingpp/releases/download/9.84/easyloggingpp_v9.84.tar.gz")
+		ExternalProject_Add(easyloggingpp
+			URL ${EASYLOGGINGPP_URL}
+			DOWNLOAD_NAME easyloggingpp_v9.84.tar.gz
+			URL_HASH SHA256=c4d51df897180120b3450e11814437121f9a3e6a090b917e4f32adfdb3ebf974
+			CONFIGURE_COMMAND mkdir -p "${STAGING_DIR}/include"
+			BUILD_COMMAND ""
+			INSTALL_COMMAND "cp" ./easylogging++.h <INSTALL_DIR>/include/
+			BUILD_IN_SOURCE 1
+			INSTALL_DIR "${STAGING_DIR}"
+			LOG_DOWNLOAD 1
+			LOG_UPDATE 1
+			LOG_CONFIGURE 1
+			LOG_BUILD 1
+			LOG_TEST 1
+			LOG_INSTALL 1
+		)
+		set(EASYLOGGINGPP_INCLUDE_DIR "${STAGING_DIR}/include")
 	endif()
-	find_package(EASYLOGGINGPP REQUIRED)
-	add_custom_target(easyloggingpp)
-else()
-	sources_url(EASYLOGGINGPP
-		"easylogging/easyloggingpp/easyloggingpp_v9.84.tar.gz"
-		"https://github.com/easylogging/easyloggingpp/releases/download/9.84/easyloggingpp_v9.84.tar.gz")
-	ExternalProject_Add(easyloggingpp
-		URL ${EASYLOGGINGPP_URL}
-		DOWNLOAD_NAME easyloggingpp_v9.84.tar.gz
-		URL_HASH SHA256=c4d51df897180120b3450e11814437121f9a3e6a090b917e4f32adfdb3ebf974
-		CONFIGURE_COMMAND mkdir -p "${STAGING_DIR}/include"
-		BUILD_COMMAND ""
-		INSTALL_COMMAND "cp" ./easylogging++.h <INSTALL_DIR>/include/
-		BUILD_IN_SOURCE 1
-		INSTALL_DIR "${STAGING_DIR}"
-		LOG_DOWNLOAD 1
-		LOG_UPDATE 1
-		LOG_CONFIGURE 1
-		LOG_BUILD 1
-		LOG_TEST 1
-		LOG_INSTALL 1
-	)
-	set(EASYLOGGINGPP_INCLUDE_DIR "${STAGING_DIR}/include")
+	include_directories(BEFORE "${EASYLOGGINGPP_INCLUDE_DIR}")
 endif()
-include_directories(BEFORE "${EASYLOGGINGPP_INCLUDE_DIR}")
+
+########################################################################
+# yandex api
+
+add_library(yandex_api
+	src/yandex/disk.cpp
+	src/yandex/tls_transport.cpp
+	src/yandex/transport.cpp)
+
+target_include_directories(yandex_api PRIVATE "${LOGGING_REPLACEMENT_DIR}")
+target_include_directories(yandex_api BEFORE PUBLIC ${OPENSSL_INCLUDE_DIR})
+if (NOT WITH_LOG)
+	add_dependencies(yandex_api easyloggingpp)
+endif()
 
 # replace logging.hpp
-set(LOGGING_REPLACEMENT_DIR "${PROJECT_BINARY_DIR}/log")
-configure_file("${PROJECT_SOURCE_DIR}/src/Logging.hpp" "${LOGGING_REPLACEMENT_DIR}/logging.hpp" COPYONLY)
-include_directories("${LOGGING_REPLACEMENT_DIR}")
+if (NOT WITH_LOG)
+	set(WITH_LOG "${PROJECT_BINARY_DIR}/log")
+	configure_file("${PROJECT_SOURCE_DIR}/src/Logging.hpp" "${WITH_LOG}/logging.hpp" COPYONLY)
+endif()
+include_directories("${EASYLOGGINGPP_INCLUDE_DIR}" "${WITH_LOG}")
 
 ########################################################################
 
@@ -249,27 +270,14 @@ else()
 endif()
 
 ########################################################################
-# yandex api
-
-add_library(yandex_api
-	src/yandex/disk.cpp
-	src/yandex/tls_transport.cpp
-	src/yandex/transport.cpp)
-list(INSERT LIBRARIES 0 yandex_api)
-
-target_include_directories(yandex_api PRIVATE "${LOGGING_REPLACEMENT_DIR}")
-target_include_directories(yandex_api BEFORE PUBLIC ${OPENSSL_INCLUDE_DIR})
-add_dependencies(yandex_api build_dependencies easyloggingpp)
-
-########################################################################
 # yadisk-uplaod
 
 if (WITH_TOOLS)
 	add_executable(yadisk-upload
 		src/yadisk-upload.cpp
 		src/Logging.cpp)
-	add_dependencies(yadisk-upload docopt yandex_api)
-	target_link_libraries(yadisk-upload ${LIBRARIES})
+	add_dependencies(yadisk-upload build_dependencies yandex_api)
+	target_link_libraries(yadisk-upload yandex_api ${LIBRARIES})
 	target_include_directories(yadisk-upload PRIVATE ${INCLUDE_DIR})
 endif()
 
