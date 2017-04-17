@@ -141,12 +141,12 @@ else()
 		find_package(Boost 1.47.0 COMPONENTS filesystem system REQUIRED)
 	else()
 		sources_url(BOOST
-			"boost.org/boost/boost_1_61_0.tar.gz"
-			"https://sourceforge.net/projects/boost/files/boost/1.61.0/boost_1_61_0.tar.gz/download")
+			"boost.org/boost/boost_1_63_0.tar.gz"
+			"https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz/download")
 		ExternalProject_Add(boost
 			URL ${BOOST_URL}
-			DOWNLOAD_NAME boost_1_61_0.tar.gz
-			URL_HASH SHA256=a77c7cc660ec02704c6884fbb20c552d52d60a18f26573c9cee0788bf00ed7e6
+			DOWNLOAD_NAME boost_1_63_0.tar.gz
+			URL_HASH SHA256=fe34a4e119798e10b8cc9e565b3b0284e9fd3977ec8a1b19586ad1dec397088b
 			CONFIGURE_COMMAND "./bootstrap.sh" --prefix=<INSTALL_DIR> --with-libraries=system,filesystem
 			BUILD_COMMAND ""
 			INSTALL_COMMAND "./b2" link=static threading=multi --ignore-site-config install
@@ -291,7 +291,7 @@ endif()
 set(REMOTE_SERVER $ENV{REMOTE_BUILD_SERVER})
 set(REMOTE_SSHCONF $ENV{REMOTE_BUILD_SERVER_SSHCONF})
 set(REMOTE_CMAKE_PARAMS "-DCMAKE_BUILD_TYPE=Release -DWITH_SYSTEM_OPENSSL=1 -DWITH_SYSTEM_BOOST=0 -DWITH_TOOLS=1 -DWITH_LIBS=0")
-set(REMOTE_VENDOR_FILES "docopt/docopt.cpp/docopt.cpp-725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz easylogging/easyloggingpp/easyloggingpp_v9.84.tar.gz boost.org/boost/boost_1_61_0.tar.gz")
+set(REMOTE_VENDOR_FILES "docopt/docopt.cpp/docopt.cpp-725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz easylogging/easyloggingpp/easyloggingpp_v9.84.tar.gz boost.org/boost/boost_1_63_0.tar.gz")
 add_custom_target(remote COMMAND
 	${CMAKE_CURRENT_SOURCE_DIR}/misc/build.remote ${REMOTE_SERVER}
 	                                              ${REMOTE_SSHCONF}
