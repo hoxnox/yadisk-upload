@@ -21,6 +21,8 @@ option(WITH_TESTS          "Build tests."  OFF)
 option(WITH_DOCS           "Generate docs" OFF)
 option(WITH_SYSTEM_BOOST   "Don't build boost with the project" ON)
 option(WITH_SYSTEM_OPENSSL "Don't build openssl with the project" ON)
+option(WITH_TOOLS          "Build yadisk-upload executable" ON)
+option(WITH_LIBS           "Install libraries" OFF)
 
 ########################################################################
 # general
@@ -262,12 +264,14 @@ add_dependencies(yandex_api build_dependencies easyloggingpp)
 ########################################################################
 # yadisk-uplaod
 
-add_executable(yadisk-upload
-	src/yadisk-upload.cpp
-	src/Logging.cpp)
-add_dependencies(yadisk-upload docopt yandex_api)
-target_link_libraries(yadisk-upload ${LIBRARIES})
-target_include_directories(yadisk-upload PRIVATE ${INCLUDE_DIR})
+if (WITH_TOOLS)
+	add_executable(yadisk-upload
+		src/yadisk-upload.cpp
+		src/Logging.cpp)
+	add_dependencies(yadisk-upload docopt yandex_api)
+	target_link_libraries(yadisk-upload ${LIBRARIES})
+	target_include_directories(yadisk-upload PRIVATE ${INCLUDE_DIR})
+endif()
 
 ########################################################################
 # tests and docs
@@ -282,26 +286,45 @@ if(WITH_TESTS)
 endif()
 
 ########################################################################
+# remote build
+
+set(REMOTE_SERVER $ENV{REMOTE_BUILD_SERVER})
+set(REMOTE_SSHCONF $ENV{REMOTE_BUILD_SERVER_SSHCONF})
+set(REMOTE_CMAKE_PARAMS "-DCMAKE_BUILD_TYPE=Release -DWITH_SYSTEM_OPENSSL=1 -DWITH_SYSTEM_BOOST=0 -DWITH_TOOLS=1 -DWITH_LIBS=0")
+set(REMOTE_VENDOR_FILES "docopt/docopt.cpp/docopt.cpp-725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz easylogging/easyloggingpp/easyloggingpp_v9.84.tar.gz boost.org/boost/boost_1_61_0.tar.gz")
+add_custom_target(remote COMMAND
+	${CMAKE_CURRENT_SOURCE_DIR}/misc/build.remote ${REMOTE_SERVER}
+	                                              ${REMOTE_SSHCONF}
+	                                              ${REMOTE_CMAKE_PARAMS}
+	                                              ${REMOTE_VENDOR_FILES}
+	                                              ${PROJECT_SOURCE_DIR})
+
+########################################################################
 # installation
 
 set(CPACK_SET_DESTDIR ON)
 
-#INSTALL(TARGETS
-#	targetname
-#	DESTINATION bin)
-#INSTALL(FILES filepath DESTINATION bin
-#	PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-#	            GROUP_EXECUTE GROUP_READ
-#	            WORLD_READ WORLD_EXECUTE)
+if (WITH_LIBS)
+	INSTALL(TARGETS yandex_api DESTINATION lib)
+	INSTALL(DIRECTORY include/yandex DESTINATION include)
+endif()
+if (WITH_TOOLS)
+	INSTALL(TARGETS yadisk-upload DESTINATION bin)
+endif()
 #INSTALL(DIRECTORY domedir DESTINATION share/${PROJECT_NAME})
 SET(CPACK_PACKAGE_NAME yadisk-upload)
-#if (WITH_SYSTEM_SOMELIB)
-#	SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libsomelib (>=1.1.1)")
-#	SET(CPACK_RPM_PACKAGE_REQUIRES "libsomelib >= 1.1.1")
-#endif()
-SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "")
-SET(CPACK_PACKAGE_VENDOR "$uername$ <hoxnox@gmail.com>")
-SET(CPACK_PACKAGE_CONTACT ${CPACK_PACKAGE_VENDOR})
+set(DELIM "")
+if (WITH_SYSTEM_OPENSSL)
+	set(CPACK_DEBIAN_PACKAGE_DEPENDS "openssl (>= 1.0.1)${DELIM}${CPACK_DEBIAN_PACKAGE_DEPENDS}")
+	set(DELIM ", ")
+endif()
+if (WITH_SYSTEM_BOOST)
+	set(CPACK_DEBIAN_PACKAGE_DEPENDS "libboost-dev (>= 1.47)${DELIM}${CPACK_DEBIAN_PACKAGE_DEPENDS}")
+	set(DELIM ", ")
+endif()
+SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Yandex Disk files upload utility and library.")
+SET(CPACK_PACKAGE_VENDOR "Merder Kim <hoxnox@gmail.com>")
+SET(CPACK_PACKAGE_CONTACT "Merder Kim <hoxnox@gmail.com>")
 SET(CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/README.md")
 SET(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
 SET(CPACK_PACKAGE_VERSION_MAJOR ${yadisk_upload_VERSION_MAJOR})

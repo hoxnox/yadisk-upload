@@ -1,0 +1,32 @@
+#!/bin/bash
+
+SSH_CONFIG_FILE=$2
+SSH_SERVER_NAME=$1
+CMAKE_PARAMS=$3
+VENDOR_SOURCES=$4
+SOURCE_DIR_NAME=$5
+REMOTE_WORK_DIR=`mktemp`
+
+# sync vendor directory
+for i in ${VENDOR_SOURCES}
+do
+	REMOTE_PROCMAN_DIR=${REMOTE_WORK_DIR}/vendor/`dirname $i`
+	rsync --rsync-path="mkdir -p ${REMOTE_PROCMAN_DIR} && rsync" -e "ssh -F ${SSH_CONFIG_FILE}" -Prh ${VENDOR_DIR}/$i ${SSH_SERVER_NAME}:${REMOTE_PROCMAN_DIR}
+done
+
+
+
+rsync --exclude="build" --exclude=".git" -e "ssh -F ${SSH_CONFIG_FILE}" -Prh ${SOURCE_DIR_NAME}/ ${SSH_SERVER_NAME}:${REMOTE_WORK_DIR}/src
+echo "calling cmake with -DVENDOR_DIR=${REMOTE_WORK_DIR}/vendor ${CMAKE_PARAMS} .."
+ssh -F ${SSH_CONFIG_FILE} ${SSH_SERVER_NAME} "
+	cd ${REMOTE_WORK_DIR}/src
+	mkdir -p build
+	cd build
+	cmake -DVENDOR_DIR=${REMOTE_WORK_DIR}/vendor ${CMAKE_PARAMS} ..
+	make
+	cpack -G DEB"
+mkdir -p remote_build_result && rsync -e "ssh -F ${SSH_CONFIG_FILE} " -Prh ${SSH_SERVER_NAME}:${REMOTE_WORK_DIR}/src/build/*.deb remote_build_result
+
+# clean
+ssh -F ${SSH_CONFIG_FILE} ${SSH_SERVER_NAME} "rm -r ${REMOTE_WORK_DIR}"
+
