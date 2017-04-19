@@ -19,8 +19,6 @@ cmake_minimum_required(VERSION 3.3.0)
 
 option(WITH_TESTS          "Build tests."  OFF)
 option(WITH_DOCS           "Generate docs" OFF)
-option(WITH_SYSTEM_BOOST   "Don't build boost with the project" ON)
-option(WITH_SYSTEM_OPENSSL "Don't build openssl with the project" ON)
 option(WITH_TOOLS          "Build yadisk-upload executable" ON)
 option(WITH_LIBS           "Install libraries" OFF)
 option(WITH_LOG            "Logging replacement" "")
@@ -36,209 +34,25 @@ set(yadisk_upload_VERSION_MINOR 0)
 set(yadisk_upload_VERSION_PATCH 4)
 add_definitions("-DVERSION=\"${yadisk_upload_VERSION_MAJOR}.${yadisk_upload_VERSION_MINOR}.${yadisk_upload_VERSION_PATCH}\"")
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
-                      "${PROJECT_SOURCE_DIR}/cmake/Modules")
+                      "${PROJECT_SOURCE_DIR}/cmake/modules"
+                      "${PROJECT_SOURCE_DIR}/cmake")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
+
 set(STAGING_DIR ${PROJECT_SOURCE_DIR}/build/staging)
-
-
-get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
-if (${LIB64} STREQUAL "TRUE")
-    set(LIBSUFFIX 64)
-else()
-    set(LIBSUFFIX "")
-endif()
+file(MAKE_DIRECTORY "${STAGING_DIR}/include")
 
 include(Vendoring)
 include(ExternalProject)
+
+include(dependencies/zlib)
+include(dependencies/openssl)
+include(dependencies/boost)
 
 ########################################################################
 # threads
 
 find_package(Threads REQUIRED)
-list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
-
-#########################################################################
-# openssl
-
-if (WITH_SYSTEM_OPENSSL)
-	if(NOT OPENSSL_ROOT)
-		set(OPENSSL_ROOT $ENV{OPENSSL_ROOT})
-	endif()
-	find_package(OpenSSL REQUIRED)
-else()
-
-	set(ZLIB_ROOT "${STAGING_DIR}")
-	if (SECOND_PASS)
-		find_package(ZLIB)
-	else()
-		sources_url(ZLIB
-			"zlib.net/zlib/zlib-1.2.11.tar.gz"
-			"http://zlib.net/zlib-1.2.11.tar.gz")
-		ExternalProject_Add(zlib
-			URL ${ZLIB_URL}
-			URL_HASH SHA256=c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1
-			CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR> --static
-			INSTALL_DIR "${STAGING_DIR}"
-			BUILD_IN_SOURCE 1
-			LOG_DOWNLOAD 1
-			LOG_UPDATE 1
-			LOG_CONFIGURE 1
-			LOG_BUILD 1
-			LOG_TEST 1
-			LOG_INSTALL 1
-		)
-		list(APPEND TOBUILD_DEPS zlib)
-	endif()
-
-	set(OPENSSL_ROOT_DIR "${STAGING_DIR}")
-	set(OPENSSL_USE_STATIC_LIBS ON)
-	if (SECOND_PASS)
-		find_package(OpenSSL)
-	else()
-		sources_url(OPENSSL
-			"openssl/openssl/openssl-1.1.0c.tar.gz"
-			"https://www.openssl.org/source/openssl-1.1.0c.tar.gz")
-		ExternalProject_Add(openssl
-			URL ${OPENSSL_URL}
-			URL_HASH SHA256=fc436441a2e05752d31b4e46115eb89709a28aef96d4fe786abe92409b2fd6f5
-			CONFIGURE_COMMAND ./config --prefix=<INSTALL_DIR> no-shared no-zlib
-			INSTALL_DIR "${STAGING_DIR}"
-			BUILD_IN_SOURCE 1
-			LOG_DOWNLOAD 1
-			LOG_UPDATE 1
-			LOG_CONFIGURE 1
-			LOG_BUILD 1
-			LOG_TEST 1
-			LOG_INSTALL 1
-		)
-		list(APPEND TOBUILD_DEPS openssl)
-	endif()
-
-endif()
-
-if (ZLIB_FOUND)
-	include_directories(BEFORE ${ZLIB_INCLUDE_DIR})
-	list(APPEND LIBRARIES ${ZLIB_LIBRARIES})
-endif()
-
-if (OpenSSL_FOUND)
-	include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
-	list(APPEND LIBRARIES ${OPENSSL_LIBRARIES})
-endif()
-
-#########################################################################
-# boost
-
-if (WITH_SYSTEM_BOOST)
-	if(NOT BOOST_ROOT)
-		set(BOOST_ROOT $ENV{BOOST_ROOT})
-	endif()
-	find_package(Boost 1.47.0 COMPONENTS filesystem system REQUIRED)
-else()
-	set(BOOST_ROOT "${STAGING_DIR}")
-	set(Boost_USE_STATIC_LIBS ON)
-	if (SECOND_PASS)
-		find_package(Boost 1.63.0 COMPONENTS filesystem system REQUIRED)
-	else()
-		sources_url(BOOST
-			"boost.org/boost/boost_1_63_0.tar.gz"
-			"https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz/download")
-		ExternalProject_Add(boost
-			URL ${BOOST_URL}
-			DOWNLOAD_NAME boost_1_63_0.tar.gz
-			URL_HASH SHA256=fe34a4e119798e10b8cc9e565b3b0284e9fd3977ec8a1b19586ad1dec397088b
-			CONFIGURE_COMMAND "./bootstrap.sh" --prefix=<INSTALL_DIR> --with-libraries=system,filesystem
-			BUILD_COMMAND ""
-			INSTALL_COMMAND "./b2" link=static threading=multi --ignore-site-config install
-			BUILD_IN_SOURCE 1
-			INSTALL_DIR "${STAGING_DIR}"
-			LOG_DOWNLOAD 1
-			LOG_UPDATE 1
-			LOG_CONFIGURE 1
-			LOG_BUILD 1
-			LOG_TEST 1
-			LOG_INSTALL 1
-		)
-		list(APPEND TOBUILD_DEPS boost)
-	endif()
-endif()
-
-if (Boost_FOUND)
-	include_directories(BEFORE ${Boost_INCLUDE_DIRS})
-	list(APPEND LIBRARIES ${Boost_LIBRARIES})
-endif()
-
-########################################################################
-# docopt
-
-if (WITH_TOOLS)
-	if (WITH_SYSTEM_DOCOPT)
-		set(DOCOPT_USE_STATIC_LIBS ON)
-		if(NOT DOCOPT_ROOT)
-			set(DOCOPT_ROOT $ENV{DOCOPT_ROOT})
-		endif()
-		find_package(Docopt REQUIRED)
-		add_custom_target(docopt)
-	else()
-		sources_url(DOCOPT
-			"docopt/docopt.cpp/docopt.cpp-725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz"
-			"https://github.com/docopt/docopt.cpp/archive/725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz")
-		ExternalProject_Add(docopt
-			URL ${DOCOPT_URL}
-			DOWNLOAD_NAME docopt.cpp.tar.gz
-			URL_HASH SHA256=cc340fce5c6694c5d1ae0bf999c5134e46bc06bc00fd4e7be1790d40697f807a
-			CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DCMAKE_BUILD_TYPE=Release
-			BUILD_IN_SOURCE 1
-			INSTALL_DIR "${STAGING_DIR}"
-			LOG_DOWNLOAD 1
-			LOG_UPDATE 1
-			LOG_CONFIGURE 1
-			LOG_BUILD 1
-			LOG_TEST 1
-			LOG_INSTALL 1
-		)
-		set(DOCOPT_LIBRARIES ${STAGING_DIR}/lib${LIBSUFFIX}/libdocopt.a)
-		set(DOCOPT_INCLUDE_DIR ${STAGING_DIR}/include)
-	endif()
-	list(APPEND INCLUDE_DIR "${DOCOPT_INCLUDE_DIR}")
-	list(APPEND LIBRARIES "${DOCOPT_LIBRARIES}")
-endif()
-	
-########################################################################
-# easyloggingpp
-
-if (NOT WITH_LOG)
-	if (WITH_SYSTEM_EASYLOGGINGPP)
-		if(NOT EASYLOGGINGPP_ROOT)
-			set(EASYLOGGINGPP_ROOT $ENV{EASYLOGGINGPP_ROOT})
-		endif()
-		find_package(EASYLOGGINGPP REQUIRED)
-		add_custom_target(easyloggingpp)
-	else()
-		sources_url(EASYLOGGINGPP
-			"easylogging/easyloggingpp/easyloggingpp_v9.84.tar.gz"
-			"https://github.com/easylogging/easyloggingpp/releases/download/9.84/easyloggingpp_v9.84.tar.gz")
-		ExternalProject_Add(easyloggingpp
-			URL ${EASYLOGGINGPP_URL}
-			DOWNLOAD_NAME easyloggingpp_v9.84.tar.gz
-			URL_HASH SHA256=c4d51df897180120b3450e11814437121f9a3e6a090b917e4f32adfdb3ebf974
-			CONFIGURE_COMMAND mkdir -p "${STAGING_DIR}/include"
-			BUILD_COMMAND ""
-			INSTALL_COMMAND "cp" ./easylogging++.h <INSTALL_DIR>/include/
-			BUILD_IN_SOURCE 1
-			INSTALL_DIR "${STAGING_DIR}"
-			LOG_DOWNLOAD 1
-			LOG_UPDATE 1
-			LOG_CONFIGURE 1
-			LOG_BUILD 1
-			LOG_TEST 1
-			LOG_INSTALL 1
-		)
-		set(EASYLOGGINGPP_INCLUDE_DIR "${STAGING_DIR}/include")
-	endif()
-	include_directories(BEFORE "${EASYLOGGINGPP_INCLUDE_DIR}")
-endif()
 
 ########################################################################
 # yandex api
@@ -248,37 +62,48 @@ add_library(yandex_api
 	src/yandex/tls_transport.cpp
 	src/yandex/transport.cpp)
 
-target_include_directories(yandex_api PRIVATE "${LOGGING_REPLACEMENT_DIR}")
-target_include_directories(yandex_api BEFORE PUBLIC ${OPENSSL_INCLUDE_DIR})
+add_dependencies(yandex_api dependencies::boost::system dependencies::boost::filesystem)
+target_include_directories(yandex_api PUBLIC
+	$<TARGET_PROPERTY:dependencies::boost,INTERFACE_INCLUDE_DIRECTORIES>)
 if (NOT WITH_LOG)
-	add_dependencies(yandex_api easyloggingpp)
+	include(dependencies/easyloggingpp)
+	add_dependencies(yandex_api dependencies::easyloggingpp)
+	target_include_directories(yandex_api PUBLIC
+		$<TARGET_PROPERTY:dependencies::easyloggingpp,INTERFACE_INCLUDE_DIRECTORIES>)
+	target_link_libraries(yandex_api dependencies::easyloggingpp)
 endif()
+
+########################################################################
+# pluggable logging
 
 # replace logging.hpp
 if (NOT WITH_LOG)
 	set(WITH_LOG "${PROJECT_BINARY_DIR}/log")
-	configure_file("${PROJECT_SOURCE_DIR}/src/Logging.hpp" "${WITH_LOG}/logging.hpp" COPYONLY)
-endif()
-include_directories("${EASYLOGGINGPP_INCLUDE_DIR}" "${WITH_LOG}")
-
-########################################################################
-
-if (TOBUILD_DEPS)
-	add_custom_target(build_dependencies ${CMAKE_COMMAND} -DSECOND_PASS=1 ${CMAKE_SOURCE_DIR} DEPENDS ${TOBUILD_DEPS})
+	configure_file("${PROJECT_SOURCE_DIR}/src/Logging.hpp" "${PROJECT_BINARY_DIR}/log/logging.hpp" COPYONLY)
+	include_directories(BEFORE "${PROJECT_BINARY_DIR}/log")
 else()
-	add_custom_target(build_dependencies)
+	include_directories(BEFORE "${WITH_LOG}")
 endif()
 
 ########################################################################
 # yadisk-uplaod
 
 if (WITH_TOOLS)
+	include(dependencies/docopt)
 	add_executable(yadisk-upload
 		src/yadisk-upload.cpp
 		src/Logging.cpp)
-	add_dependencies(yadisk-upload build_dependencies yandex_api)
-	target_link_libraries(yadisk-upload yandex_api ${LIBRARIES})
-	target_include_directories(yadisk-upload PRIVATE ${INCLUDE_DIR})
+	add_dependencies(yadisk-upload yandex_api dependencies::docopt)
+	target_include_directories(yandex_api PRIVATE
+		$<TARGET_PROPERTY:dependencies::docopt,INTERFACE_INCLUDE_DIRECTORIES>)
+	target_link_libraries(yadisk-upload yandex_api
+	                                    dependencies::boost::filesystem
+	                                    dependencies::boost::system
+	                                    dependencies::openssl::ssl
+	                                    dependencies::openssl::crypto
+	                                    dependencies::docopt
+	                                    ${CMAKE_THREAD_LIBS_INIT}
+	                                    ${CMAKE_DL_LIBS})
 endif()
 
 ########################################################################
