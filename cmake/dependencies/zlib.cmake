@@ -27,13 +27,20 @@ if (NOT TARGET dependencies::zlib)
 		find_package(ZLIB REQUIRED)
 
 	else()
-
+		if(CYGWIN)
+			sources_url(ZLIB_GZOPEN_W_PATCH
+				"zlib.net/zlib/1.2.11-gzopen_w.patch"
+				"https://github.com/cygwinports/zlib/blob/master/1.2.11-gzopen_w.patch")
+			file(DOWNLOAD ${ZLIB_GZOPEN_W_PATCH_URL} "${STAGING_DIR}/1.2.11-gzopen_w.patch")
+			set(EXTRA_PATCH patch -p2 -i "${STAGING_DIR}/1.2.11-gzopen_w.patch")
+		endif()
 		sources_url(ZLIB
 			"zlib.net/zlib/zlib-1.2.11.tar.gz"
 			"http://zlib.net/zlib-1.2.11.tar.gz")
 		ExternalProject_Add(dependencies_zlib
 			URL ${ZLIB_URL}
 			URL_HASH SHA256=c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1
+			PATCH_COMMAND ${EXTRA_PATCH}
 			CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR> --static
 			INSTALL_DIR "${STAGING_DIR}"
 			BUILD_IN_SOURCE 1
