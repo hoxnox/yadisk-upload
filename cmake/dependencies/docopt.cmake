@@ -1,21 +1,33 @@
 # @author hoxnox <hoxnox@gmail.com>
 # @date 20170419 15:29:04
+#
+# Settings:
+#     WITH_SYSTEM_DOCOPT - don't build, try to find it
+#     DOCOPT_ROOT        - where to find
+#
+# After including this file you'll have the following targets with it's
+# properties:
+#     docopt
+#         INTERFACE_INCLUDE_DIRECTORIES - include dirs
+#         IMPORTED_LOCATION             - library
 
 if (NOT TARGET dependencies::docopt)
+
+	include(dependencies/common)
 	option(WITH_SYSTEM_DOCOPT "Don't build docopt with the project" OFF)
 
+	add_library(dependencies::docopt UNKNOWN IMPORTED)
+
 	if (WITH_SYSTEM_DOCOPT)
+
 		set(DOCOPT_USE_STATIC_LIBS ON)
 		if(NOT DOCOPT_ROOT)
 			set(DOCOPT_ROOT $ENV{DOCOPT_ROOT})
 		endif()
 		find_package(Docopt REQUIRED)
-		add_library(dependencies::docopt UNKNOWN IMPORTED)
-		set_property(TARGET depepndencies::docopt APPEND
-			PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${DOCOPT_INCLUDE_DIR})
-		set_property(TARGET depepndencies::docopt APPEND
-			PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${DOCOPT_LIBRARIES})
+
 	else()
+
 		sources_url(DOCOPT
 			"docopt/docopt.cpp/docopt.cpp-725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz"
 			"https://github.com/docopt/docopt.cpp/archive/725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz")
@@ -33,18 +45,22 @@ if (NOT TARGET dependencies::docopt)
 			LOG_TEST 1
 			LOG_INSTALL 1
 		)
-		add_library(dependencies::docopt STATIC IMPORTED)
 		add_dependencies(dependencies::docopt dependencies_docopt)
-		set_target_properties(dependencies::docopt PROPERTIES
-			INTERFACE_INCLUDE_DIRECTORIES "${STAGING_DIR}/include")
 		get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
 		if (${LIB64} STREQUAL "TRUE")
 			set(LIBSUFFIX 64)
 		else()
 			set(LIBSUFFIX "")
 		endif()
-		set_target_properties(dependencies::docopt PROPERTIES IMPORTED_LOCATION
-			"${STAGING_DIR}/lib${LIBSUFFIX}/${CMAKE_STATIC_LIBRARY_PREFIX}docopt${CMAKE_STATIC_LIBRARY_SUFFIX}")
+		set(DOCOPT_INCLUDE_DIR "${STAGING_DIR}/include")
+		set(DOCOPT_LIBRARIES "${STAGING_DIR}/lib${LIBSUFFIX}/${CMAKE_STATIC_LIBRARY_PREFIX}docopt${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
 	endif()
+
+	set_property(TARGET dependencies::docopt APPEND
+		PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${DOCOPT_INCLUDE_DIR})
+	set_property(TARGET dependencies::docopt APPEND
+		PROPERTY IMPORTED_LOCATION ${DOCOPT_LIBRARIES})
+
 endif()
 

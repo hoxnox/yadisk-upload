@@ -39,12 +39,6 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
-set(STAGING_DIR ${PROJECT_SOURCE_DIR}/build/staging)
-file(MAKE_DIRECTORY "${STAGING_DIR}/include")
-
-include(Vendoring)
-include(ExternalProject)
-
 include(dependencies/zlib)
 include(dependencies/openssl)
 include(dependencies/boost)
@@ -70,7 +64,6 @@ if (NOT WITH_LOG)
 	add_dependencies(yandex_api dependencies::easyloggingpp)
 	target_include_directories(yandex_api PUBLIC
 		$<TARGET_PROPERTY:dependencies::easyloggingpp,INTERFACE_INCLUDE_DIRECTORIES>)
-	target_link_libraries(yandex_api dependencies::easyloggingpp)
 endif()
 
 ########################################################################
@@ -102,9 +95,7 @@ if (WITH_TOOLS)
 	                                    dependencies::boost::filesystem
 	                                    dependencies::boost::system
 	                                    $<TARGET_PROPERTY:dependencies::boost,INTERFACE_LINK_LIBRARIES>
-	                                    dependencies::docopt
-	                                    ${CMAKE_THREAD_LIBS_INIT}
-	                                    ${CMAKE_DL_LIBS})
+	                                    dependencies::docopt)
 endif()
 
 ########################################################################

@@ -1,18 +1,33 @@
 # @author hoxnox <hoxnox@gmail.com>
 # @date 20170419 15:29:04
+#
+# Settings:
+#     WITH_SYSTEM_ZLIB - don't build, try to find it
+#     ZLIB_ROOT     - where to find
+#
+# After including this file you'll have the following targets with it's
+# properties:
+#     zlib
+#         INTERFACE_INCLUDE_DIRECTORIES - include dirs
+#         IMPORTED_LOCATION             - library
+
 
 if (NOT TARGET dependencies::zlib)
+
+	include(dependencies/common)
 	option(WITH_SYSTEM_ZLIB "Don't build zlib" ON)
 	
+	add_library(dependencies::zlib UNKNOWN IMPORTED)
+
 	if (WITH_SYSTEM_ZLIB)
+
 		if(NOT ZLIB_ROOT)
 			set(ZLIB_ROOT $ENV{ZLIB_ROOT})
 		endif()
 		find_package(ZLIB REQUIRED)
-	   	include_directories(BEFORE ${ZLIB_INCLUDE_DIR})
-		add_library(dependencies::zlib UNKNOWN IMPORTED)
-		set_target_properties(dependencies::zlib PROPERTIES IMPORTED_LOCATION ${ZLIB_LIBRARIES})
+
 	else()
+
 		sources_url(ZLIB
 			"zlib.net/zlib/zlib-1.2.11.tar.gz"
 			"http://zlib.net/zlib-1.2.11.tar.gz")
@@ -29,10 +44,16 @@ if (NOT TARGET dependencies::zlib)
 			LOG_TEST 1
 			LOG_INSTALL 1
 		)
-		add_library(dependencies::zlib STATIC IMPORTED)
 		add_dependencies(dependencies::zlib dependencies_zlib)
-		set_target_properties(dependencies::zlib PROPERTIES IMPORTED_LOCATION
-			"${STAGING_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}z${CMAKE_STATIC_LIBRARY_SUFFIX}")
+		set(ZLIB_INCLUDE_DIRS "${STAGING_DIR}/include")
+		set(ZLIB_LIBRARIES "${STAGING_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}z${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
 	endif()
+
+	set_target_properties(dependencies::zlib PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
+	set_target_properties(dependencies::zlib PROPERTIES
+		IMPORTED_LOCATION ${ZLIB_LIBRARIES})
+
 endif()
 
