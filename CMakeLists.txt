@@ -96,11 +96,12 @@ if (WITH_TOOLS)
 	add_dependencies(yadisk-upload yandex_api dependencies::docopt)
 	target_include_directories(yandex_api PRIVATE
 		$<TARGET_PROPERTY:dependencies::docopt,INTERFACE_INCLUDE_DIRECTORIES>)
+	target_include_directories(yandex_api PRIVATE
+		$<TARGET_PROPERTY:dependencies::boost,INTERFACE_INCLUDE_DIRECTORIES>)
 	target_link_libraries(yadisk-upload yandex_api
 	                                    dependencies::boost::filesystem
 	                                    dependencies::boost::system
-	                                    dependencies::openssl::ssl
-	                                    dependencies::openssl::crypto
+	                                    $<TARGET_PROPERTY:dependencies::boost,INTERFACE_LINK_LIBRARIES>
 	                                    dependencies::docopt
 	                                    ${CMAKE_THREAD_LIBS_INIT}
 	                                    ${CMAKE_DL_LIBS})
