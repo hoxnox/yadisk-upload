@@ -40,7 +40,7 @@ set(yadisk_upload_VERSION_PATCH 4)
 add_definitions("-DVERSION=\"${yadisk_upload_VERSION_MAJOR}.${yadisk_upload_VERSION_MINOR}.${yadisk_upload_VERSION_PATCH}\"")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
-set(STAGING_DIR "C:/tmp")
+set(STAGING_DIR "${CMAKE_BINARY_DIR}/staging")
 
 if (NOT WIN32)
 	include(dependencies/zlib)
@@ -66,8 +66,10 @@ if (WIN32)
 	add_definitions(-DWIN32_LEAN_AND_MEAN)
 endif()
 
-add_dependencies(yandex_api dependencies::boost::system dependencies::boost::filesystem)
-target_include_directories(yandex_api PUBLIC
+add_dependencies(yandex_api dependencies::boost
+                            dependencies::boost::system
+                            dependencies::boost::filesystem)
+target_include_directories(yandex_api BEFORE PUBLIC
 	$<TARGET_PROPERTY:dependencies::boost,INTERFACE_INCLUDE_DIRECTORIES>)
 if (NOT WITH_LOG)
 	include(dependencies/easyloggingpp)
@@ -97,9 +99,9 @@ if (WITH_TOOLS)
 		src/yadisk-upload.cpp
 		src/Logging.cpp)
 	add_dependencies(yadisk-upload yandex_api dependencies::docopt)
-	target_include_directories(yandex_api PRIVATE
+	target_include_directories(yadisk-upload BEFORE PRIVATE
 		$<TARGET_PROPERTY:dependencies::docopt,INTERFACE_INCLUDE_DIRECTORIES>)
-	target_include_directories(yandex_api PRIVATE
+	target_include_directories(yadisk-upload BEFORE PRIVATE
 		$<TARGET_PROPERTY:dependencies::boost,INTERFACE_INCLUDE_DIRECTORIES>)
 	target_link_libraries(yadisk-upload yandex_api
 	                                    dependencies::boost::filesystem

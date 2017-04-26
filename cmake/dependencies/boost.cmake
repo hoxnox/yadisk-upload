@@ -52,9 +52,9 @@ if (NOT TARGET dependencies::boost)
 				set_property(TARGET dependencies::boost  APPEND PROPERTY
 					INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR})
 
-				get_property(OPENSSL_CRYPTO_LIBRARY TARGET dependencies::openssl::crypto
-					PROPERTY IMPORTED_LOCATION)
 				get_property(OPENSSL_SSL_LIBRARY TARGET dependencies::openssl::ssl
+					PROPERTY IMPORTED_LOCATION)
+				get_property(OPENSSL_CRYPTO_LIBRARY TARGET dependencies::openssl::crypto
 					PROPERTY IMPORTED_LOCATION)
 				get_property(OPENSSL_LIB_DEPENDENCIES TARGET dependencies::openssl
 					PROPERTY INTERFACE_LINK_LIBRARIES)
@@ -76,9 +76,9 @@ if (NOT TARGET dependencies::boost)
 				set_property(TARGET dependencies::boost  APPEND PROPERTY
 					INTERFACE_INCLUDE_DIRECTORIES ${LIBRESSL_INCLUDE_DIR})
 
-				get_property(LIBRESSL_CRYPTO_LIBRARY TARGET dependencies::libressl::crypto
-					PROPERTY IMPORTED_LOCATION)
 				get_property(LIBRESSL_SSL_LIBRARY TARGET dependencies::libressl::ssl
+					PROPERTY IMPORTED_LOCATION)
+				get_property(LIBRESSL_CRYPTO_LIBRARY TARGET dependencies::libressl::crypto
 					PROPERTY IMPORTED_LOCATION)
 				get_property(LIBRESSL_LIB_DEPENDENCIES TARGET dependencies::libressl
 					PROPERTY INTERFACE_LINK_LIBRARIES)
