@@ -29,13 +29,13 @@ if (NOT TARGET dependencies::docopt)
 	else()
 
 		sources_url(DOCOPT
-			"docopt/docopt.cpp/docopt.cpp-725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz"
-			"https://github.com/docopt/docopt.cpp/archive/725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz")
+			"docopt/docopt.cpp/docopt.cpp-0.6.2.tar.gz"
+			"https://github.com/docopt/docopt.cpp/archive/v0.6.2.tar.gz")
 		ExternalProject_Add(dependencies_docopt
 			URL ${DOCOPT_URL}
 			DOWNLOAD_NAME docopt.cpp.tar.gz
-			URL_HASH SHA256=cc340fce5c6694c5d1ae0bf999c5134e46bc06bc00fd4e7be1790d40697f807a
-			CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DCMAKE_BUILD_TYPE=Release
+			URL_HASH SHA256=c05542245232420d735c7699098b1ea130e3a92bade473b64baf876cdf098a17
+			CMAKE_ARGS ${CMAKE_STATIC_RUNTIME_EXTRA_ARGS} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DCMAKE_BUILD_TYPE=Release
 			BUILD_IN_SOURCE 1
 			INSTALL_DIR "${STAGING_DIR}"
 			LOG_DOWNLOAD 1
@@ -54,7 +54,11 @@ if (NOT TARGET dependencies::docopt)
 			endif()
 		endif()
 		set(DOCOPT_INCLUDE_DIR "${STAGING_DIR}/include")
-		set(DOCOPT_LIBRARIES "${STAGING_DIR}/lib${LIBSUFFIX}/${CMAKE_STATIC_LIBRARY_PREFIX}docopt${CMAKE_STATIC_LIBRARY_SUFFIX}")
+		if (WIN32)
+			set(DOCOPT_LIBRARIES "${STAGING_DIR}/lib${LIBSUFFIX}/${CMAKE_STATIC_LIBRARY_PREFIX}docopt_s${CMAKE_STATIC_LIBRARY_SUFFIX}")
+		else()
+			set(DOCOPT_LIBRARIES "${STAGING_DIR}/lib${LIBSUFFIX}/${CMAKE_STATIC_LIBRARY_PREFIX}docopt${CMAKE_STATIC_LIBRARY_SUFFIX}")
+		endif()
 
 	endif()
 

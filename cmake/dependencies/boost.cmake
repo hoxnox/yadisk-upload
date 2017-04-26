@@ -19,6 +19,7 @@ if (NOT TARGET dependencies::boost)
 
 	include(dependencies/common)
 	option(WITH_SYSTEM_BOOST "Don't build boost with the project" ON)
+	option(BOOST_STATIC_CRT  "Use static runtime libraries" ON)
 	
 	add_library(dependencies::boost UNKNOWN IMPORTED)
 
@@ -36,39 +37,69 @@ if (NOT TARGET dependencies::boost)
 		find_package(Boost 1.47.0 COMPONENTS system filesystem REQUIRED)
 
 	else()
+		if (BOOST_STATIC_CRT)
+			set(EXTRA_FLAGS ${EXTRA_FLAGS} "runtime-link=static")
+		endif()
 
-		if (TARGET dependencies::openssl)
-			get_property(OPENSSL_INCLUDE_DIR TARGET dependencies::openssl
-				PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-			set(EXTRA_FLAGS "cflags=-I${OPENSSL_INCLUDE_DIR}"
-			                "cxxflags=-I${OPENSSL_INCLUDE_DIR}")
-			set_property(TARGET dependencies::boost  APPEND PROPERTY
-				INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR})
+		if (NOT WIN32)
+			set(BOOTSTRAP_CMD "./bootstrap.sh")
+			if (TARGET dependencies::openssl)
+				get_property(OPENSSL_INCLUDE_DIR TARGET dependencies::openssl
+					PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+				set(EXTRA_FLAGS ${EXTRA_FLAGS}
+						"cflags=-I${OPENSSL_INCLUDE_DIR}"
+			                        "cxxflags=-I${OPENSSL_INCLUDE_DIR}")
+				set_property(TARGET dependencies::boost  APPEND PROPERTY
+					INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR})
 
-			get_property(OPENSSL_CRYPTO_LIBRARY TARGET dependencies::openssl::crypto
-				PROPERTY IMPORTED_LOCATION)
-			get_property(OPENSSL_SSL_LIBRARY TARGET dependencies::openssl::ssl
-				PROPERTY IMPORTED_LOCATION)
-			get_property(OPENSSL_LIB_DEPENDENCIES TARGET dependencies::openssl
-				PROPERTY INTERFACE_LINK_LIBRARIES)
+				get_property(OPENSSL_CRYPTO_LIBRARY TARGET dependencies::openssl::crypto
+					PROPERTY IMPORTED_LOCATION)
+				get_property(OPENSSL_SSL_LIBRARY TARGET dependencies::openssl::ssl
+					PROPERTY IMPORTED_LOCATION)
+				get_property(OPENSSL_LIB_DEPENDENCIES TARGET dependencies::openssl
+					PROPERTY INTERFACE_LINK_LIBRARIES)
+				set_property(TARGET dependencies::boost APPEND PROPERTY
+					INTERFACE_LINK_LIBRARIES ${OPENSSL_SSL_LIBRARY}
+			                                         ${OPENSSL_CRYPTO_LIBRARY}
+			                                         ${OPENSSL_LIB_DEPENDENCIES})
+				set(DEPENDENCIES dependencies::openssl)
+			endif()
+		else()
+			add_definitions(-DBOOST_ALL_NO_LIB)
+			set(BOOTSTRAP_CMD "bootstrap.bat")
+			if (TARGET dependencies::libressl)
+				get_property(LIBRESSL_INCLUDE_DIR TARGET dependencies::libressl
+					PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+				set(EXTRA_FLAGS ${EXTRA_FLAGS}
+						"cflags=-I${LIBRESSL_INCLUDE_DIR}"
+			                        "cxxflags=-I${LIBRESSL_INCLUDE_DIR}")
+				set_property(TARGET dependencies::boost  APPEND PROPERTY
+					INTERFACE_INCLUDE_DIRECTORIES ${LIBRESSL_INCLUDE_DIR})
 
-			set_property(TARGET dependencies::boost APPEND PROPERTY
-				INTERFACE_LINK_LIBRARIES ${OPENSSL_SSL_LIBRARY}
-			                             ${OPENSSL_CRYPTO_LIBRARY}
-			                             ${OPENSSL_LIB_DEPENDENCIES})
-			set(DEPENDENCIES dependencies::openssl)
+				get_property(LIBRESSL_CRYPTO_LIBRARY TARGET dependencies::libressl::crypto
+					PROPERTY IMPORTED_LOCATION)
+				get_property(LIBRESSL_SSL_LIBRARY TARGET dependencies::libressl::ssl
+					PROPERTY IMPORTED_LOCATION)
+				get_property(LIBRESSL_LIB_DEPENDENCIES TARGET dependencies::libressl
+					PROPERTY INTERFACE_LINK_LIBRARIES)
+				set_property(TARGET dependencies::boost APPEND PROPERTY
+					INTERFACE_LINK_LIBRARIES ${LIBRESSL_SSL_LIBRARY}
+			                                         ${LIBRESSL_CRYPTO_LIBRARY}
+			                                         ${LIBRESSL_LIB_DEPENDENCIES})
+				set(DEPENDENCIES dependencies::libressl)
+			endif()
 		endif()
 
 		sources_url(BOOST
-			"boost.org/boost/boost_1_63_0.tar.gz"
-			"https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz/download")
+			"boost.org/boost/boost_1_64_0.tar.gz"
+			"https://dl.bintray.com/boostorg/release/1.64.0/source/:boost_1_64_0.tar.gz")
 		ExternalProject_Add(dependencies_boost
 			URL ${BOOST_URL}
-			DOWNLOAD_NAME boost_1_63_0.tar.gz
-			URL_HASH SHA256=fe34a4e119798e10b8cc9e565b3b0284e9fd3977ec8a1b19586ad1dec397088b
-			CONFIGURE_COMMAND "./bootstrap.sh" --prefix=<INSTALL_DIR> --with-libraries=system,filesystem
+			DOWNLOAD_NAME boost_1_64_0.tar.gz
+			URL_HASH SHA256=0445c22a5ef3bd69f5dfb48354978421a85ab395254a26b1ffb0aa1bfd63a108
+			CONFIGURE_COMMAND ${BOOTSTRAP_CMD}
 			BUILD_COMMAND ""
-			INSTALL_COMMAND "./b2" ${EXTRA_FLAGS} link=static threading=multi --ignore-site-config install
+			INSTALL_COMMAND "./b2" ${EXTRA_FLAGS} link=static include=static variant=release threading=multi --with-system --with-filesystem --prefix=<INSTALL_DIR> --layout=system --ignore-site-config install
 			BUILD_IN_SOURCE 1
 			INSTALL_DIR "${STAGING_DIR}"
 			LOG_DOWNLOAD 1
@@ -81,8 +112,8 @@ if (NOT TARGET dependencies::boost)
 		add_dependencies(dependencies::boost dependencies_boost)
 		add_dependencies(dependencies_boost ${DEPENDENCIES})
 		set(Boost_INCLUDE_DIRS "${STAGING_DIR}/include")
-		set(Boost_SYSTEM_LIBRARY     "${STAGING_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}boost_system${CMAKE_STATIC_LIBRARY_SUFFIX}")
-		set(Boost_FILESYSTEM_LIBRARY "${STAGING_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}boost_filesystem${CMAKE_STATIC_LIBRARY_SUFFIX}")
+		set(Boost_SYSTEM_LIBRARY     "${STAGING_DIR}/lib/libboost_system${CMAKE_STATIC_LIBRARY_SUFFIX}")
+		set(Boost_FILESYSTEM_LIBRARY "${STAGING_DIR}/lib/libboost_filesystem${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
 	endif()
 

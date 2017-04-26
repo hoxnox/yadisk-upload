@@ -26,6 +26,11 @@ option(WITH_LOG            "Logging replacement" "")
 ########################################################################
 # general
 
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
+	"${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+	"${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(StaticMSVC)
+
 project(yadisk-upload)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -33,14 +38,16 @@ set(yadisk_upload_VERSION_MAJOR 0)
 set(yadisk_upload_VERSION_MINOR 0)
 set(yadisk_upload_VERSION_PATCH 4)
 add_definitions("-DVERSION=\"${yadisk_upload_VERSION_MAJOR}.${yadisk_upload_VERSION_MINOR}.${yadisk_upload_VERSION_PATCH}\"")
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
-                      "${PROJECT_SOURCE_DIR}/cmake/modules"
-                      "${PROJECT_SOURCE_DIR}/cmake")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
+set(STAGING_DIR "C:/tmp")
 
-include(dependencies/zlib)
-include(dependencies/openssl)
+if (NOT WIN32)
+	include(dependencies/zlib)
+	include(dependencies/openssl)
+else()
+	include(dependencies/libressl)
+endif()
 include(dependencies/boost)
 
 ########################################################################
@@ -55,6 +62,9 @@ add_library(yandex_api
 	src/yandex/disk.cpp
 	src/yandex/tls_transport.cpp
 	src/yandex/transport.cpp)
+if (WIN32)
+	add_definitions(-DWIN32_LEAN_AND_MEAN)
+endif()
 
 add_dependencies(yandex_api dependencies::boost::system dependencies::boost::filesystem)
 target_include_directories(yandex_api PUBLIC

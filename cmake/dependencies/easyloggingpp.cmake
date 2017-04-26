@@ -34,9 +34,9 @@ if (NOT TARGET dependencies::easyloggingpp)
 			URL ${EASYLOGGINGPP_URL}
 			DOWNLOAD_NAME easyloggingpp_v9.84.tar.gz
 			URL_HASH SHA256=c4d51df897180120b3450e11814437121f9a3e6a090b917e4f32adfdb3ebf974
-			CONFIGURE_COMMAND mkdir -p "${STAGING_DIR}/include"
+			CONFIGURE_COMMAND ""
 			BUILD_COMMAND ""
-			INSTALL_COMMAND "cp" ./easylogging++.h <INSTALL_DIR>/include/
+			INSTALL_COMMAND "${CMAKE_COMMAND}" -E copy ./easylogging++.h <INSTALL_DIR>/include/
 			BUILD_IN_SOURCE 1
 			INSTALL_DIR "${STAGING_DIR}"
 			LOG_DOWNLOAD 1

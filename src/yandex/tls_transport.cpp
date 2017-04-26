@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include <vector>
 #include <string>
 #include <sstream>
@@ -23,9 +27,6 @@ limitations under the License.
 
 #include "tls_transport.hpp"
 #include <logging.hpp>
-#include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
-#include <boost/lexical_cast.hpp>
 
 namespace yandex {
 
