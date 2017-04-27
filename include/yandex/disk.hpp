@@ -27,7 +27,7 @@ namespace disk {
 class api
 {
 public:
-	api(std::string token);
+	api(std::string token, bool cert_check = true);
 	api(std::shared_ptr<transport> cmd_transport);
 	~api();
 

@@ -34,10 +34,10 @@ struct api::api_impl_
 	std::shared_ptr<transport> cmd_transport{nullptr};
 };
 
-api::api(std::string token)
+api::api(std::string token, bool cert_check)
 	: impl_(new api_impl_)
 {
-	impl_->cmd_transport = std::make_shared<tls_transport>(token);
+	impl_->cmd_transport = std::make_shared<tls_transport>(token, "cloud-api.yandex.net", 443, !cert_check, 0);
 }
 
 api::api(std::shared_ptr<transport> transport)

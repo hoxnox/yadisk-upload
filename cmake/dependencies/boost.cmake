@@ -98,8 +98,9 @@ if (NOT TARGET dependencies::boost)
 			DOWNLOAD_NAME boost_1_64_0.tar.gz
 			URL_HASH SHA256=0445c22a5ef3bd69f5dfb48354978421a85ab395254a26b1ffb0aa1bfd63a108
 			CONFIGURE_COMMAND ${BOOTSTRAP_CMD}
-			BUILD_COMMAND ""
-			INSTALL_COMMAND "./b2" ${EXTRA_FLAGS} link=static include=static variant=release threading=multi --with-system --with-filesystem --prefix=<INSTALL_DIR> --layout=system --ignore-site-config install
+			PATCH_COMMAND "cmake" -E tar zxf "${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/misc/boost_1_64_libressl.patch.tar.gz"
+			BUILD_COMMAND "./b2" ${EXTRA_FLAGS} link=static include=static variant=release threading=multi --with-system --with-filesystem --prefix=<INSTALL_DIR> --layout=system --ignore-site-config install
+			INSTALL_COMMAND ""
 			BUILD_IN_SOURCE 1
 			INSTALL_DIR "${STAGING_DIR}"
 			LOG_DOWNLOAD 1

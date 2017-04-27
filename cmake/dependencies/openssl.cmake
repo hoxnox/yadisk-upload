@@ -55,11 +55,11 @@ if (NOT TARGET dependencies::openssl)
 		endif()
 
 		sources_url(OPENSSL
-			"openssl/openssl/openssl-1.1.0c.tar.gz"
-			"https://www.openssl.org/source/openssl-1.1.0c.tar.gz")
+			"openssl/openssl/openssl-1.1.0e.tar.gz"
+			"https://www.openssl.org/source/openssl-1.1.0e.tar.gz")
 		ExternalProject_Add(dependencies_openssl
 			URL ${OPENSSL_URL}
-			URL_HASH SHA256=fc436441a2e05752d31b4e46115eb89709a28aef96d4fe786abe92409b2fd6f5
+			URL_HASH SHA256=57be8618979d80c910728cfc99369bf97b2a1abd8f366ab6ebdee8975ad3874c
 			CONFIGURE_COMMAND ./config --prefix=<INSTALL_DIR> no-shared ${CFG_SUFFIX}
 			INSTALL_DIR "${STAGING_DIR}"
 			BUILD_IN_SOURCE 1
