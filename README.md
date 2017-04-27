@@ -23,8 +23,8 @@ make
 
 ### standalone
 
-You can build on standalone a server. Make the following directory
-structure with the dependencies (see following) and define environment
+You can build on a standalone server. Make the following directory
+structure with the dependencies and define environment
 variable `VENDOR_DIR`.
 
 ```
@@ -47,9 +47,8 @@ vendoring
 ```
 ### Microsoft Visual Studio
 
-OpenSSL configure script need perl installed. To simplify build on
-with Visual Studio LibreSSL is used. It's better to build dependencies
-with the project:
+OpenSSL configure script uses perl. LibreSSL is used when building with
+Visual Studio to avoid this dependency.
 
 ```sh
 mkdir build
@@ -75,7 +74,7 @@ At the next page you'll get `client_id`.
 
 ![get client id](https://habrastorage.org/files/02b/5b1/929/02b5b1929ba548c0b1fe6fc29699d13f.png)
 
-Go to the link 
+Go to the link
 
 	https://oauth.yandex.ru/authorize?response_type=token&client_id=<paste client id here>
 
