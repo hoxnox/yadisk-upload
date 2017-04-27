@@ -64,6 +64,7 @@ tls_transport::tls_transport(std::string token,
 	: transport(token, host)
 	, impl_(new tls_transport_impl_)
 	, token_(token)
+	, dont_verify_(dont_verify)
 {
 	if (chunksz != 0)
 		impl_->io_bufsz = chunksz;
