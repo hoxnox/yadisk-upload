@@ -41,7 +41,7 @@ public:
 
 	std::shared_ptr<transport>
 		make_transport(std::string host, uint16_t port, size_t chunksz = 0) override
-			{ return std::make_shared<tls_transport>(token_, host, port, chunksz); }
+			{ return std::make_shared<tls_transport>(token_, host, port, false, chunksz); }
 
 private:
 	class tls_transport_impl_;

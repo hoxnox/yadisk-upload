@@ -244,7 +244,7 @@ api::upload(std::string destination, std::istream& strm, size_t size, size_t chu
 	if (!url)
 		return false;
 
-	auto put_transport = impl_->cmd_transport->make_transport(url.host, url.port, false, chunksz);
+	auto put_transport = impl_->cmd_transport->make_transport(url.host, url.port, chunksz);
 	auto rs = put_transport->put(url.suffix, strm, size);
 	if (!rs)
 	{
