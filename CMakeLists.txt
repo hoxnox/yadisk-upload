@@ -128,7 +128,7 @@ endif()
 set(REMOTE_SERVER $ENV{REMOTE_BUILD_SERVER})
 set(REMOTE_SSHCONF $ENV{REMOTE_BUILD_SERVER_SSHCONF})
 set(REMOTE_CMAKE_PARAMS "-DCMAKE_BUILD_TYPE=Release -DWITH_SYSTEM_OPENSSL=1 -DWITH_SYSTEM_BOOST=0 -DWITH_TOOLS=1 -DWITH_LIBS=0")
-set(REMOTE_VENDOR_FILES "docopt/docopt.cpp/docopt.cpp-725519e2441b47e51f4c3ee35fc4edb926bcc262.tar.gz easylogging/easyloggingpp/easyloggingpp_v9.84.tar.gz boost.org/boost/boost_1_63_0.tar.gz")
+set(REMOTE_VENDOR_FILES "docopt/docopt.cpp/docopt.cpp-0.6.2.tar.gz easylogging/easyloggingpp/easyloggingpp_v9.84.tar.gz boost.org/boost/boost_1_64_0.tar.gz")
 add_custom_target(remote COMMAND
 	${CMAKE_CURRENT_SOURCE_DIR}/misc/build.remote ${REMOTE_SERVER}
 	                                              ${REMOTE_SSHCONF}
