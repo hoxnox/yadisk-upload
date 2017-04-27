@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include <vector>
 #include <string>
 #include <sstream>
@@ -23,9 +27,6 @@ limitations under the License.
 
 #include "tls_transport.hpp"
 #include <logging.hpp>
-#include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
-#include <boost/lexical_cast.hpp>
 
 namespace yandex {
 
@@ -63,6 +64,7 @@ tls_transport::tls_transport(std::string token,
 	: transport(token, host)
 	, impl_(new tls_transport_impl_)
 	, token_(token)
+	, dont_verify_(dont_verify)
 {
 	if (chunksz != 0)
 		impl_->io_bufsz = chunksz;
@@ -72,10 +74,14 @@ tls_transport::tls_transport(std::string token,
 	{
 		impl_->ctx.set_default_verify_paths();
 		if (dont_verify)
+		{
 			impl_->sock.set_verify_mode(ssl::verify_none);
+		}
 		else
+		{
 			impl_->sock.set_verify_mode(ssl::verify_peer);
-		impl_->sock.set_verify_callback(ssl::rfc2818_verification(host));
+			impl_->sock.set_verify_callback(ssl::rfc2818_verification(host));
+		}
 
 		tcp::resolver resolver(impl_->srv);
 		tcp::resolver::query query(host, boost::lexical_cast<std::string>(port));

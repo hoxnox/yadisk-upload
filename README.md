@@ -10,6 +10,58 @@ with full access to the profile.
 ./yadisk-upload --auth=AQFFAAADVGl4AAQmatuP25OUtE9DhtFZgBTMDNI ~/file/to/upload /filename_on_disk
 ```
 
+## building
+
+The project uses cmake build system. You can set `WITH_SYSTEM_*` to 0 to
+build some dependencies with the project. Example on Linux:
+
+```sh
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DWITH_SYSTEM_BOOST=0 -DWITH_SYSTEM_OPENSSL=0 -DWITH_SYSTEM_ZLIB=0 ..
+make
+```
+
+### standalone
+
+You can build on standalone a server. Make the following directory
+structure with the dependencies (see following) and define environment
+variable `VENDOR_DIR`.
+
+```
+vendoring
+├── boost.org
+│   └── boost
+│       └── boost_1_64_0.tar.gz
+├── docopt
+│   └── docopt.cpp
+│       ├── docopt.cpp-0.6.2.tar.gz
+├── easylogging
+│   └── easyloggingpp
+│       └── easyloggingpp_v9.84.tar.gz
+├── libressl.org
+│   └── libressl
+│       └── libressl-2.5.3.tar.gz
+├── openssl
+    └── openssl
+        └── openssl-1.1.0c.tar.gz
+```
+### Microsoft Visual Studio
+
+OpenSSL configure script need perl installed. To simplify build on
+with Visual Studio LibreSSL is used. It's better to build dependencies
+with the project:
+
+```sh
+mkdir build
+cd build
+cmake -DWITH_SYSTEM_LIBRESSL=0 -DWITH_SYSTEM_BOOST=0
+```
+
+Launch Visual Studio on `yadisk-upload.sln` chose build type `Release`
+and build `ALL_BUILD` subproject.
+
+Tested on Visual Studio 2017.
+
 ## yandex oauth token
 
 You should get yandex oatuh token first with write permissions to the
