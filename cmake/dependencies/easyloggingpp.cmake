@@ -28,11 +28,11 @@ if (NOT TARGET dependencies::easyloggingpp)
 	else()
 
 		sources_url(EASYLOGGINGPP
-			"easylogging/easyloggingpp/easyloggingpp_v9.84.tar.gz"
-			"https://github.com/easylogging/easyloggingpp/releases/download/9.84/easyloggingpp_v9.84.tar.gz")
+			"easylogging/easyloggingpp/easyloggingpp_v9.89.tar.gz"
+			"https://github.com/easylogging/easyloggingpp/releases/download/9.89/easyloggingpp_v9.89.tar.gz")
 		ExternalProject_Add(dependencies_easyloggingpp
 			URL ${EASYLOGGINGPP_URL}
-			DOWNLOAD_NAME easyloggingpp_v9.84.tar.gz
+			DOWNLOAD_NAME easyloggingpp_v9.89.tar.gz
 			URL_HASH SHA256=c4d51df897180120b3450e11814437121f9a3e6a090b917e4f32adfdb3ebf974
 			CONFIGURE_COMMAND ""
 			BUILD_COMMAND ""

@@ -21,6 +21,17 @@ cmake -DCMAKE_BUILD_TYPE=Release -DWITH_SYSTEM_BOOST=0 -DWITH_SYSTEM_OPENSSL=0 -
 make
 ```
 
+### conan
+
+You can use conan for dependency resolving.
+
+```sh
+mkdir build && cd build
+conan install --build=missing
+cmake -DWITH_CONAN=1 ..
+make
+```
+
 ### standalone
 
 You can build on a standalone server. Make the following directory
@@ -37,8 +48,8 @@ vendoring
 │       ├── docopt.cpp-0.6.2.tar.gz
 ├── easylogging
 │   └── easyloggingpp
-│       └── easyloggingpp_v9.84.tar.gz
-├── libressl.org
+│       └── easyloggingpp_v9.89.tar.gz
+├── openbsd
 │   └── libressl
 │       └── libressl-2.5.3.tar.gz
 ├── openssl
