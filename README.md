@@ -27,7 +27,7 @@ You can use conan for dependency resolving.
 
 ```sh
 mkdir build && cd build
-conan install --build=missing
+conan install --build=missing ..
 cmake -DWITH_CONAN=1 ..
 make
 ```
