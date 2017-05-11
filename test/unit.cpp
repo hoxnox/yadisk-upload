@@ -6,7 +6,7 @@ std::stringstream errlog;
 std::stringstream vrblog;
 
 // test cases
-#include <Logging.hpp>
+#include <logging.hpp>
 #include "yandex/t_disk.hpp"
 #include "yandex/t_tls_transport.hpp"
 

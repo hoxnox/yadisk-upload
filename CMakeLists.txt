@@ -22,6 +22,7 @@ option(WITH_DOCS           "Generate docs" OFF)
 option(WITH_TOOLS          "Build yadisk-upload executable" ON)
 option(WITH_LIBS           "Install libraries" OFF)
 option(WITH_LOG            "Logging replacement" "")
+option(WITH_CONAN          "Use conan for dependencies resolving" ON)
 
 ########################################################################
 # general
@@ -36,19 +37,24 @@ project(yadisk-upload)
 set(CMAKE_CXX_STANDARD 14)
 set(yadisk_upload_VERSION_MAJOR 0)
 set(yadisk_upload_VERSION_MINOR 0)
-set(yadisk_upload_VERSION_PATCH 5)
+set(yadisk_upload_VERSION_PATCH 6)
 add_definitions("-DVERSION=\"${yadisk_upload_VERSION_MAJOR}.${yadisk_upload_VERSION_MINOR}.${yadisk_upload_VERSION_PATCH}\"")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 set(STAGING_DIR "${CMAKE_BINARY_DIR}/staging")
 
-if (NOT WIN32)
-	include(dependencies/zlib)
-	include(dependencies/openssl)
+if (WITH_CONAN)
+	include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+	conan_basic_setup()
 else()
-	include(dependencies/libressl)
+	if (NOT WIN32)
+		include(dependencies/zlib)
+		include(dependencies/openssl)
+	else()
+		include(dependencies/libressl)
+	endif()
+	include(dependencies/boost)
 endif()
-include(dependencies/boost)
 
 ########################################################################
 # threads
@@ -62,20 +68,23 @@ add_library(yandex_api
 	src/yandex/disk.cpp
 	src/yandex/tls_transport.cpp
 	src/yandex/transport.cpp)
-if (WIN32)
-	add_definitions(-DWIN32_LEAN_AND_MEAN)
-endif()
 
-add_dependencies(yandex_api dependencies::boost
-                            dependencies::boost::system
-                            dependencies::boost::filesystem)
-target_include_directories(yandex_api BEFORE PUBLIC
-	$<TARGET_PROPERTY:dependencies::boost,INTERFACE_INCLUDE_DIRECTORIES>)
-if (NOT WITH_LOG)
-	include(dependencies/easyloggingpp)
-	add_dependencies(yandex_api dependencies::easyloggingpp)
-	target_include_directories(yandex_api PUBLIC
-		$<TARGET_PROPERTY:dependencies::easyloggingpp,INTERFACE_INCLUDE_DIRECTORIES>)
+if (NOT WITH_CONAN)
+	if (WIN32)
+		add_definitions(-DWIN32_LEAN_AND_MEAN)
+	endif()
+
+	add_dependencies(yandex_api dependencies::boost
+	                            dependencies::boost::system
+	                            dependencies::boost::filesystem)
+	target_include_directories(yandex_api BEFORE PUBLIC
+		$<TARGET_PROPERTY:dependencies::boost,INTERFACE_INCLUDE_DIRECTORIES>)
+	if (NOT WITH_LOG)
+		include(dependencies/easyloggingpp)
+		add_dependencies(yandex_api dependencies::easyloggingpp)
+		target_include_directories(yandex_api PUBLIC
+			$<TARGET_PROPERTY:dependencies::easyloggingpp,INTERFACE_INCLUDE_DIRECTORIES>)
+	endif()
 endif()
 
 ########################################################################
@@ -94,20 +103,25 @@ endif()
 # yadisk-uplaod
 
 if (WITH_TOOLS)
-	include(dependencies/docopt)
 	add_executable(yadisk-upload
 		src/yadisk-upload.cpp
 		src/Logging.cpp)
-	add_dependencies(yadisk-upload yandex_api dependencies::docopt)
-	target_include_directories(yadisk-upload BEFORE PRIVATE
-		$<TARGET_PROPERTY:dependencies::docopt,INTERFACE_INCLUDE_DIRECTORIES>)
-	target_include_directories(yadisk-upload BEFORE PRIVATE
-		$<TARGET_PROPERTY:dependencies::boost,INTERFACE_INCLUDE_DIRECTORIES>)
-	target_link_libraries(yadisk-upload yandex_api
-	                                    dependencies::boost::filesystem
-	                                    dependencies::boost::system
-	                                    $<TARGET_PROPERTY:dependencies::boost,INTERFACE_LINK_LIBRARIES>
-	                                    dependencies::docopt)
+	add_dependencies(yadisk-upload yandex_api)
+	if (NOT WITH_CONAN)
+		include(dependencies/docopt)
+		add_dependencies(yadisk-upload dependencies::docopt)
+		target_include_directories(yadisk-upload BEFORE PRIVATE
+			$<TARGET_PROPERTY:dependencies::docopt,INTERFACE_INCLUDE_DIRECTORIES>)
+		target_include_directories(yadisk-upload BEFORE PRIVATE
+			$<TARGET_PROPERTY:dependencies::boost,INTERFACE_INCLUDE_DIRECTORIES>)
+		target_link_libraries(yadisk-upload yandex_api
+		                                    dependencies::boost::filesystem
+		                                    dependencies::boost::system
+		                                    $<TARGET_PROPERTY:dependencies::boost,INTERFACE_LINK_LIBRARIES>
+		                                    dependencies::docopt)
+	else()
+		target_link_libraries(yadisk-upload yandex_api ${CONAN_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+	endif()
 endif()
 
 ########################################################################
@@ -127,8 +141,8 @@ endif()
 
 set(REMOTE_SERVER $ENV{REMOTE_BUILD_SERVER})
 set(REMOTE_SSHCONF $ENV{REMOTE_BUILD_SERVER_SSHCONF})
-set(REMOTE_CMAKE_PARAMS "-DCMAKE_BUILD_TYPE=Release -DWITH_SYSTEM_OPENSSL=1 -DWITH_SYSTEM_BOOST=0 -DWITH_TOOLS=1 -DWITH_LIBS=0")
-set(REMOTE_VENDOR_FILES "docopt/docopt.cpp/docopt.cpp-0.6.2.tar.gz easylogging/easyloggingpp/easyloggingpp_v9.84.tar.gz boost.org/boost/boost_1_64_0.tar.gz")
+set(REMOTE_CMAKE_PARAMS "-DCMAKE_BUILD_TYPE=Release -DWITH_SYSTEM_OPENSSL=1 -DWITH_SYSTEM_BOOST=0 -DWITH_TOOLS=1 -DWITH_LIBS=0 -DWITH_CONAN=0")
+set(REMOTE_VENDOR_FILES "docopt/docopt.cpp/docopt.cpp-0.6.2.tar.gz easylogging/easyloggingpp/easyloggingpp_v9.89.tar.gz boost.org/boost/boost_1_64_0.tar.gz")
 add_custom_target(remote COMMAND
 	${CMAKE_CURRENT_SOURCE_DIR}/misc/build.remote ${REMOTE_SERVER}
 	                                              ${REMOTE_SSHCONF}
