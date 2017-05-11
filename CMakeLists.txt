@@ -22,7 +22,7 @@ option(WITH_DOCS           "Generate docs" OFF)
 option(WITH_TOOLS          "Build yadisk-upload executable" ON)
 option(WITH_LIBS           "Install libraries" OFF)
 option(WITH_LOG            "Logging replacement" "")
-option(WITH_CONAN          "Use conan for dependencies resolving" OFF)
+option(WITH_CONAN          "Use conan for dependencies resolving" ON)
 
 ########################################################################
 # general
@@ -37,7 +37,7 @@ project(yadisk-upload)
 set(CMAKE_CXX_STANDARD 14)
 set(yadisk_upload_VERSION_MAJOR 0)
 set(yadisk_upload_VERSION_MINOR 0)
-set(yadisk_upload_VERSION_PATCH 5)
+set(yadisk_upload_VERSION_PATCH 6)
 add_definitions("-DVERSION=\"${yadisk_upload_VERSION_MAJOR}.${yadisk_upload_VERSION_MINOR}.${yadisk_upload_VERSION_PATCH}\"")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
@@ -141,8 +141,8 @@ endif()
 
 set(REMOTE_SERVER $ENV{REMOTE_BUILD_SERVER})
 set(REMOTE_SSHCONF $ENV{REMOTE_BUILD_SERVER_SSHCONF})
-set(REMOTE_CMAKE_PARAMS "-DCMAKE_BUILD_TYPE=Release -DWITH_SYSTEM_OPENSSL=1 -DWITH_SYSTEM_BOOST=0 -DWITH_TOOLS=1 -DWITH_LIBS=0")
-set(REMOTE_VENDOR_FILES "docopt/docopt.cpp/docopt.cpp-0.6.2.tar.gz easylogging/easyloggingpp/easyloggingpp_v9.84.tar.gz boost.org/boost/boost_1_64_0.tar.gz")
+set(REMOTE_CMAKE_PARAMS "-DCMAKE_BUILD_TYPE=Release -DWITH_SYSTEM_OPENSSL=1 -DWITH_SYSTEM_BOOST=0 -DWITH_TOOLS=1 -DWITH_LIBS=0 -DWITH_CONAN=0")
+set(REMOTE_VENDOR_FILES "docopt/docopt.cpp/docopt.cpp-0.6.2.tar.gz easylogging/easyloggingpp/easyloggingpp_v9.89.tar.gz boost.org/boost/boost_1_64_0.tar.gz")
 add_custom_target(remote COMMAND
 	${CMAKE_CURRENT_SOURCE_DIR}/misc/build.remote ${REMOTE_SERVER}
 	                                              ${REMOTE_SSHCONF}
