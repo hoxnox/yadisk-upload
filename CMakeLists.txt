@@ -22,7 +22,7 @@ option(WITH_DOCS           "Generate docs" OFF)
 option(WITH_TOOLS          "Build yadisk-upload executable" ON)
 option(WITH_LIBS           "Install libraries" OFF)
 option(WITH_LOG            "Logging replacement" "")
-option(WITH_CONAN          "Use conan for dependencies resolving" ON)
+option(WITH_CONAN          "Use conan for dependencies resolving" OFF)
 
 ########################################################################
 # general

@@ -33,7 +33,7 @@ if (NOT TARGET dependencies::easyloggingpp)
 		ExternalProject_Add(dependencies_easyloggingpp
 			URL ${EASYLOGGINGPP_URL}
 			DOWNLOAD_NAME easyloggingpp_v9.89.tar.gz
-			URL_HASH SHA256=c4d51df897180120b3450e11814437121f9a3e6a090b917e4f32adfdb3ebf974
+			URL_HASH SHA256=f91f2d3d560513c8a595f5ab0b10075e8fa7ee5eb92147a0925bc9a4183e0c48
 			CONFIGURE_COMMAND ""
 			BUILD_COMMAND ""
 			INSTALL_COMMAND "${CMAKE_COMMAND}" -E copy ./easylogging++.h <INSTALL_DIR>/include/
@@ -47,7 +47,7 @@ if (NOT TARGET dependencies::easyloggingpp)
 			LOG_INSTALL 1
 		)
 		add_dependencies(dependencies::easyloggingpp dependencies_easyloggingpp)
-		set(${EASYLOGGINGPP_INCLUDE_DIR} "${STAGING_DIR}/include")
+		set(EASYLOGGINGPP_INCLUDE_DIR "${STAGING_DIR}/include")
 
 	endif()
 
