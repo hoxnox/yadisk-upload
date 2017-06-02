@@ -39,7 +39,8 @@ make
 
 You can build on a standalone server. Make the following directory
 structure with the dependencies and define environment
-variable `VENDOR_DIR`.
+variable `VENDOR_DIR`. Conan packages should be transited to the local
+conan server.
 
 ```
 vendoring
