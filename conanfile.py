@@ -13,23 +13,23 @@ class YadiskUploadConan(NxConanFile):
     options = {"tools":[True, False], "libressl":[True, False], "tests":[True, False], "log":"ANY"}
     default_options = "tools=True", "libressl=True", "tests=False", "log="
     build_policy = "missing"
-    requires = ("boost/1.64.0@hoxnox/testing")
+    requires = ("boost/1.64.0@hoxnox/stable")
     generators = "cmake"
 
     def requirements(self):
         if self.options.libressl:
-            self.requires("libressl/2.5.3@hoxnox/testing")
+            self.requires("libressl/2.5.3@hoxnox/stable")
         else:
-            self.requires("openssl/1.1.0e@hoxnox/testing")
+            self.requires("openssl/1.1.0e@hoxnox/stable")
 
         if self.options.tests:
-            self.requires("gtest/1.8.0@hoxnox/testing")
+            self.requires("gtest/1.8.0@hoxnox/stable")
 
         if self.options.tools:
-            self.requires("docopt.cpp/0.6.2@hoxnox/testing")
+            self.requires("docopt.cpp/0.6.2@hoxnox/stable")
 
         if len(str(self.options.log)) == 0 or self.options.tools:
-            self.requires("easyloggingpp/9.89@hoxnox/testing")
+            self.requires("easyloggingpp/9.89@hoxnox/stable")
 
     def do_source(self):
         self.retrieve("d4ffba390ee4e6ef07cade2e64c31b25c1476271a4e1b45ebb8d92b5e30525c2",
