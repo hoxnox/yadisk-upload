@@ -6,7 +6,7 @@ username = os.getenv("CONAN_USERNAME", "hoxnox")
 
 class SnappyTestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    requires = "yadisk-upload/0.0.6@%s/%s" % (username, channel)
+    requires = "yadisk-upload/0.0.7@%s/%s" % (username, channel)
     default_options = "yadisk-upload:tools=False"
     generators = "cmake"
 
