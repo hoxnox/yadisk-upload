@@ -30,7 +30,7 @@ class url_t;
 
 struct api::api_impl_
 {
-	url_t get_upload_url(const std::string& destination);
+	url_t get_upload_url(const std::string& destination, bool overwrite);
 	std::shared_ptr<transport> cmd_transport{nullptr};
 };
 
@@ -187,11 +187,13 @@ fetch_upload_url(std::string str)
 }
 
 url_t
-api::api_impl_::get_upload_url(const std::string& destination)
+api::api_impl_::get_upload_url(const std::string& destination, bool overwrite)
 {
 	std::string raw_response;
 	std::string url = "/v1/disk/resources/upload?path=" + url_encode(destination);
-	auto rs = cmd_transport->get("/v1/disk/resources/upload?path=" + url_encode(destination),
+    if (overwrite)
+        url += "&overwrite=true";
+	auto rs = cmd_transport->get(url,
 			[&raw_response, &url](const std::string& url_, const uint8_t* data, size_t datasz)
 			{
 				if (url == url_)
@@ -224,7 +226,7 @@ api::api_impl_::get_upload_url(const std::string& destination)
 
 /**@note Don't escape special symbols in parameters. Use UTF-8.*/
 bool
-api::upload(std::string source, std::string destination, size_t chunksz)
+api::upload(std::string source, std::string destination, bool overwrite, size_t chunksz)
 {
 	boost::filesystem::path fs_source(source);
 	std::ifstream ifile(fs_source.string().c_str(), std::ios::binary);
@@ -234,13 +236,13 @@ api::upload(std::string source, std::string destination, size_t chunksz)
 		     << _(" Filename: \"") << fs_source.string() << "\"";
 		return false;
 	}
-	return upload(destination, ifile, chunksz);
+	return upload(destination, ifile, overwrite, chunksz);
 }
 
 bool
-api::upload(std::string destination, std::istream& strm, size_t size, size_t chunksz)
+api::upload(std::string destination, std::istream& strm, bool overwrite, size_t size, size_t chunksz)
 {
-	auto url = impl_->get_upload_url(destination);
+	auto url = impl_->get_upload_url(destination, overwrite);
 	if (!url)
 		return false;
 
