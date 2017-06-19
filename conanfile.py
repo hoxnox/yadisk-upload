@@ -6,7 +6,7 @@ from shutil import copy
 class YadiskUploadConan(NxConanFile):
     name = "yadisk-upload"
     description = "Yandex disk file upload library and tool"
-    version = "0.0.6"
+    version = "0.0.7"
     url = "https://github.com/hoxnox/yadisk-upload"
     license = "http://github.com/hoxnox/yadisk-upload/blob/master/LICENSE"
     settings = "os", "compiler", "build_type", "arch"
