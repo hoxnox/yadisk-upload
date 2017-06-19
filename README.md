@@ -12,6 +12,20 @@ with full access to the profile.
 
 ## building
 
+You should use conan for dependency resolving. In may 2017 conan.io start
+moving into bintray. So you should use my personal repository in
+dependency resolving
+
+```sh
+mkdir build && cd build
+conan remote add hoxnox-bintray https://api.bintray.com/conan/hoxnox/conan
+conan install --build=missing ..
+cmake ..
+make
+```
+
+### cmake-only build (DEPRECATED)
+
 The project uses cmake build system. You can set `WITH_SYSTEM_*` to 0 to
 build some dependencies with the project. Example on Linux:
 
@@ -21,22 +35,12 @@ cmake -DWITH_CONAN=0 -DCMAKE_BUILD_TYPE=Release -DWITH_SYSTEM_BOOST=0 -DWITH_SYS
 make
 ```
 
-### conan
-
-You can use conan for dependency resolving.
-
-```sh
-mkdir build && cd build
-conan install --build=missing ..
-cmake -DWITH_CONAN=1 ..
-make
-```
-
 ### standalone
 
 You can build on a standalone server. Make the following directory
 structure with the dependencies and define environment
-variable `VENDOR_DIR`.
+variable `VENDOR_DIR`. Conan packages should be transited to the local
+conan server.
 
 ```
 vendoring
@@ -65,8 +69,9 @@ With conan configure steps are the same:
 
 ```sh
 mkdir build && cd build
+conan remote add hoxnox-bintray https://api.bintray.com/conan/hoxnox/conan
 conan install --build=missing ..
-cmake -DWITH_CONAN=1 ..
+cmake ..
 ```
 
 without conan (not recomended):

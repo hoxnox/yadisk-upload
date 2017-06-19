@@ -36,12 +36,14 @@ public:
 	 * @param source file path on local machine
 	 * @param chunksz - size of chunk in chunk-encoding (default to 1024*1024)
 	 * @note directories should exists*/
-	bool upload(std::string source, std::string destination, size_t chunksz = 0);
+	bool upload(std::string source, std::string destination,
+	            bool overwrite = false, size_t chunksz = 0);
 	/**@brief Uploads data from input stream.
 	 * @param size - how many bytes to read from the stream. In case of
 	 * @param chunksz - size of chunk in chunk-encoding (default to 1024*1024)
 	 * zero - read while strm->good()*/
-	bool upload(std::string destination, std::istream& strm, size_t datasz = 0, size_t chunksz = 0);
+	bool upload(std::string destination, std::istream& strm,
+	            bool overwrite = false, size_t datasz = 0, size_t chunksz = 0);
 
 private:
 	struct api_impl_;
