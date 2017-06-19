@@ -23,7 +23,7 @@ static const char USAGE[] =
 R"(Yandex disk uploader
 
 Usage:
-  yadisk-upload [-v] [-C] [-a TOKEN] SOURCE DEST
+  yadisk-upload [-v] [-C] [-a TOKEN] [-f] SOURCE DEST
   yadisk-upload -h | --version
 
 Arguments:
@@ -33,6 +33,7 @@ Arguments:
 Options:
   -a TOKEN --auth=TOKEN  Authorization token
   -C --ssl-no-check      Don't check SSL certificate
+  -f --force             Force overwrite on conflict
   -v --verbose           Make a lot of noise
   -h --help              Show help message
   --version              Show version
@@ -54,6 +55,8 @@ struct Config
 			{
 				if (arg.first == "--verbose" && arg.second.asBool())
 					verbose = true;
+				if (arg.first == "--force" && arg.second.asBool())
+					force = true;
 				else if (arg.first == "--auth")
 					auth = arg.second.asString();
 				else if (arg.first == "--ssl-no-check")
@@ -69,6 +72,7 @@ struct Config
 	std::string auth;
 	std::string source;
 	std::string dest;
+    bool force{false};
 	bool check_cert{true};
 };
 
@@ -80,7 +84,7 @@ main(int argc, char* argv[])
 	init_logging(cfg.verbose ? 1 : 0);
 
 	yandex::disk::api disk_api(cfg.auth, cfg.check_cert);
-	if (!disk_api.upload(cfg.source, cfg.dest))
+	if (!disk_api.upload(cfg.source, cfg.dest, cfg.force))
 		return 1;
 
 	return 0;
