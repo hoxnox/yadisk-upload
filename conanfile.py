@@ -6,7 +6,7 @@ from shutil import copy
 class YadiskUploadConan(NxConanFile):
     name = "yadisk-upload"
     description = "Yandex disk file upload library and tool"
-    version = "0.0.6"
+    version = "0.0.7"
     url = "https://github.com/hoxnox/yadisk-upload"
     license = "http://github.com/hoxnox/yadisk-upload/blob/master/LICENSE"
     settings = "os", "compiler", "build_type", "arch"
@@ -32,7 +32,7 @@ class YadiskUploadConan(NxConanFile):
             self.requires("easyloggingpp/9.89@hoxnox/stable")
 
     def do_source(self):
-        self.retrieve("d4ffba390ee4e6ef07cade2e64c31b25c1476271a4e1b45ebb8d92b5e30525c2",
+        self.retrieve("b688cf69e69dd598f523031d52576c6af9172caa0d8fab276f34d92527435743",
             [
                 'vendor://hoxnox/yadisk-upload/yadisk-upload-{version}.tar.gz'.format(version=self.version),
                 'https://github.com/hoxnox/yadisk-upload/archive/{version}.tar.gz'.format(version=self.version)
