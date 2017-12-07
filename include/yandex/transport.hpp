@@ -61,9 +61,7 @@ public:
 	                                              const uint8_t* data,
 	                                              const size_t datasz)>;
 
-	transport(std::string token = "",
-	          std::string host = "cloud.yandex.net",
-	          uint16_t port = 443)
+	transport(std::string token = "")
 		: token_(token) {}
 
 	/**@brief perform HTTP GET request*/

@@ -61,7 +61,7 @@ tls_transport::tls_transport(std::string token,
                              uint16_t port,
                              bool dont_verify,
                              size_t chunksz)
-	: transport(token, host)
+	: transport(token)
 	, impl_(new tls_transport_impl_)
 	, token_(token)
 	, dont_verify_(dont_verify)
