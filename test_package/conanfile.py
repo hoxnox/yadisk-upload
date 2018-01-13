@@ -11,12 +11,13 @@ class SnappyTestConan(ConanFile):
     generators = "cmake"
 
     def configure(self):
-        self.options["yadisk-upload"].log = self.conanfile_directory
+        self.options["yadisk-upload"].log = os.path.dirname(os.path.realpath(__file__))
         self.options["yadisk-upload"].libressl = False
 
     def build(self):
-        cmake = CMake(self.settings)
-        self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
+        self.options["yadisk-upload"].log = self.source_folder
+        cmake = CMake(self)
+        self.run('cmake "%s" %s' % (self.source_folder, cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
     def imports(self):
