@@ -14,8 +14,8 @@ class YadiskUploadConan(ConanFile):
     test_requires = "gtest/[>=1.8.0]"
 
     def source(self):
-    #    #get(self, **self.conan_data["sources"][self.version], strip_root=True)
-        copy(self, "*", src="/home/h/devel/yadisk-upload", dst=self.source_folder)
+        get(self, **self.conan_data["sources"][self.version], strip_root=True)
+        #copy(self, "*", src="/home/h/devel/yadisk-upload", dst=self.source_folder)
 
 
     def requirements(self):
