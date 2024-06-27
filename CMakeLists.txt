@@ -20,17 +20,11 @@ cmake_minimum_required(VERSION 3.3.0)
 option(WITH_TESTS          "Build tests."  OFF)
 option(WITH_DOCS           "Generate docs" OFF)
 option(WITH_TOOLS          "Build yadisk-upload executable" ON)
-option(WITH_LIBS           "Install libraries" OFF)
+option(WITH_LIBS           "Install libraries" ON)
 option(WITH_LOG            "Logging replacement" "")
-option(WITH_CONAN          "Use conan for dependencies resolving" ON)
 
 ########################################################################
 # general
-
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
-	"${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-	"${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include(StaticMSVC)
 
 project(yadisk-upload)
 
@@ -43,19 +37,6 @@ add_definitions("-DVERSION=\"${yadisk_upload_VERSION_MAJOR}.${yadisk_upload_VERS
 include_directories("${PROJECT_SOURCE_DIR}/include")
 set(STAGING_DIR "${CMAKE_BINARY_DIR}/staging")
 
-if (WITH_CONAN)
-	include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-	conan_basic_setup()
-else()
-	if (NOT WIN32)
-		include(dependencies/zlib)
-		include(dependencies/openssl)
-	else()
-		include(dependencies/libressl)
-	endif()
-	include(dependencies/boost)
-endif()
-
 ########################################################################
 # threads
 
@@ -64,28 +45,25 @@ find_package(Threads REQUIRED)
 ########################################################################
 # yandex api
 
-add_library(yandex_api
+
+set(YANDEX_API_SRC
 	src/yandex/disk.cpp
 	src/yandex/tls_transport.cpp
-	src/yandex/transport.cpp)
+	src/yandex/transport.cpp
+)
 
-if (NOT WITH_CONAN)
-	if (WIN32)
-		add_definitions(-DWIN32_LEAN_AND_MEAN)
-	endif()
-
-	add_dependencies(yandex_api dependencies::boost
-	                            dependencies::boost::system
-	                            dependencies::boost::filesystem)
-	target_include_directories(yandex_api BEFORE PUBLIC
-		$<TARGET_PROPERTY:dependencies::boost,INTERFACE_INCLUDE_DIRECTORIES>)
-	if (NOT WITH_LOG)
-		include(dependencies/easyloggingpp)
-		add_dependencies(yandex_api dependencies::easyloggingpp)
-		target_include_directories(yandex_api PUBLIC
-			$<TARGET_PROPERTY:dependencies::easyloggingpp,INTERFACE_INCLUDE_DIRECTORIES>)
-	endif()
+if (NOT WITH_LOG)
+	set(YANDEX_API_SRC ${YANDEX_API_SRC} src/Logging.cpp)
 endif()
+
+add_library(yandex_api ${YANDEX_API_SRC})
+
+########################################################################
+# requirements
+
+find_package(Boost COMPONENTS headers system filesystem REQUIRED)
+find_package(OpenSSL REQUIRED)
+target_link_libraries(yandex_api Boost::headers Boost::system Boost::filesystem openssl::openssl)
 
 ########################################################################
 # pluggable logging
@@ -95,6 +73,8 @@ if (NOT WITH_LOG)
 	set(WITH_LOG "${PROJECT_BINARY_DIR}/log")
 	configure_file("${PROJECT_SOURCE_DIR}/src/Logging.hpp" "${PROJECT_BINARY_DIR}/log/logging.hpp" COPYONLY)
 	include_directories(BEFORE "${PROJECT_BINARY_DIR}/log")
+	find_package(easyloggingpp REQUIRED)
+	target_link_libraries(yandex_api easyloggingpp::easyloggingpp)
 else()
 	include_directories(BEFORE "${WITH_LOG}")
 endif()
@@ -107,21 +87,8 @@ if (WITH_TOOLS)
 		src/yadisk-upload.cpp
 		src/Logging.cpp)
 	add_dependencies(yadisk-upload yandex_api)
-	if (NOT WITH_CONAN)
-		include(dependencies/docopt)
-		add_dependencies(yadisk-upload dependencies::docopt)
-		target_include_directories(yadisk-upload BEFORE PRIVATE
-			$<TARGET_PROPERTY:dependencies::docopt,INTERFACE_INCLUDE_DIRECTORIES>)
-		target_include_directories(yadisk-upload BEFORE PRIVATE
-			$<TARGET_PROPERTY:dependencies::boost,INTERFACE_INCLUDE_DIRECTORIES>)
-		target_link_libraries(yadisk-upload yandex_api
-		                                    dependencies::boost::filesystem
-		                                    dependencies::boost::system
-		                                    $<TARGET_PROPERTY:dependencies::boost,INTERFACE_LINK_LIBRARIES>
-		                                    dependencies::docopt)
-	else()
-		target_link_libraries(yadisk-upload yandex_api ${CONAN_LIBS} ${CMAKE_THREAD_LIBS_INIT})
-	endif()
+	find_package(docopt REQUIRED)
+	target_link_libraries(yadisk-upload yandex_api docopt_s ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
 ########################################################################
@@ -135,20 +102,6 @@ if(WITH_TESTS)
 	enable_testing()
 	add_subdirectory(test)
 endif()
-
-########################################################################
-# remote build
-
-set(REMOTE_SERVER $ENV{REMOTE_BUILD_SERVER})
-set(REMOTE_SSHCONF $ENV{REMOTE_BUILD_SERVER_SSHCONF})
-set(REMOTE_CMAKE_PARAMS "-DCMAKE_BUILD_TYPE=Release -DWITH_SYSTEM_OPENSSL=1 -DWITH_SYSTEM_BOOST=0 -DWITH_TOOLS=1 -DWITH_LIBS=0 -DWITH_CONAN=0")
-set(REMOTE_VENDOR_FILES "docopt/docopt.cpp/docopt.cpp-0.6.2.tar.gz easylogging/easyloggingpp/easyloggingpp_v9.89.tar.gz boost.org/boost/boost_1_64_0.tar.gz")
-add_custom_target(remote COMMAND
-	${CMAKE_CURRENT_SOURCE_DIR}/misc/build.remote ${REMOTE_SERVER}
-	                                              ${REMOTE_SSHCONF}
-	                                              ${REMOTE_CMAKE_PARAMS}
-	                                              ${REMOTE_VENDOR_FILES}
-	                                              ${PROJECT_SOURCE_DIR})
 
 ########################################################################
 # installation
