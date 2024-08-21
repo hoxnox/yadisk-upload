@@ -60,15 +60,6 @@ find_package(Boost COMPONENTS headers system filesystem REQUIRED)
 find_package(OpenSSL REQUIRED)
 target_link_libraries(yandex_api Boost::headers Boost::system Boost::filesystem openssl::openssl)
 
-add_library(yandex_api ${YANDEX_API_SRC})
-
-########################################################################
-# requirements
-
-find_package(Boost COMPONENTS headers system filesystem REQUIRED)
-find_package(OpenSSL REQUIRED)
-target_link_libraries(yandex_api Boost::headers Boost::system Boost::filesystem openssl::openssl)
-
 ########################################################################
 # pluggable logging
 
@@ -77,8 +68,6 @@ if (NOT WITH_LOG)
 	set(WITH_LOG "${PROJECT_BINARY_DIR}/log")
 	configure_file("${PROJECT_SOURCE_DIR}/src/logging.hpp" "${PROJECT_BINARY_DIR}/log/logging.hpp" COPYONLY)
 	include_directories(BEFORE "${PROJECT_BINARY_DIR}/log")
-	find_package(easyloggingpp REQUIRED)
-	target_link_libraries(yandex_api easyloggingpp::easyloggingpp)
 else()
 	include_directories(BEFORE "${WITH_LOG}")
 endif()
