@@ -1,6 +1,6 @@
 sources:
   "0.0.9":
-    sha256: f9a2860402d178ea3d2203c2431ec06722927bebc199838fcf998557a2ad4ef4
+    sha256: eea0312318af6f693fa44b3ba29e3251a288effde7b2fa8d040de9d96a65f56d
     url: https://github.com/hoxnox/yadisk-upload/archive/0.0.9.tar.gz
   "0.0.8":
     sha256: dd5c970a3cda76d1b99dc1bcc1160b083f910e095246bef6eca67624dc114a2a
