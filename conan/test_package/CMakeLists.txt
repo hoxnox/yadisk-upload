@@ -5,5 +5,5 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(yadisk_upload REQUIRED)
 
-add_executable(test_package test.cpp)
+add_executable(test_package test.cpp stdlogger.cpp)
 target_link_libraries(test_package yadisk_upload::yadisk_upload)
