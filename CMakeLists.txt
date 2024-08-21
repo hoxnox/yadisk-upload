@@ -45,7 +45,6 @@ find_package(Threads REQUIRED)
 ########################################################################
 # yandex api
 
-
 set(YANDEX_API_SRC
 	src/yandex/disk.cpp
 	src/yandex/tls_transport.cpp
