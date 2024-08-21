@@ -17,7 +17,7 @@ You should use conan for dependency resolving.
 ```sh
 mkdir build && cd build
 conan install -b missing ../conan --output-folder=.
-cmake -dcmake_build_type=release -dcmake_toolchain_file="conan_toolchain.cmake" ..
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake" ..
 make
 ```
 
@@ -67,7 +67,7 @@ With conan configure steps are the same:
 ```sh
 mkdir build && cd build
 conan install -b missing ../conan --output-folder=.
-cmake -dcmake_build_type=release -dcmake_toolchain_file="conan_toolchain.cmake" ..
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake" ..
 ```
 
 without conan (not recomended):
