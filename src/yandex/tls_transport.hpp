@@ -40,8 +40,10 @@ public:
 	void cancel(uint16_t code = 0, std::string message = "") override;
 
 	std::shared_ptr<transport>
-		make_transport(std::string host, uint16_t port, size_t chunksz = 0) override
-			{ return std::make_shared<tls_transport>(token_, host, port, dont_verify_, chunksz); }
+	make_transport(std::string host, uint16_t port, size_t chunksz = 0) override
+	{
+		return std::make_shared<tls_transport>(token_, host, port, dont_verify_, chunksz);
+	}
 
 private:
 	class tls_transport_impl_;
@@ -50,6 +52,4 @@ private:
 	bool dont_verify_{false};
 };
 
-} // namespace
-
-
+} // namespace yandex

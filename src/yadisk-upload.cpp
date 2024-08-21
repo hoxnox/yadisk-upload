@@ -19,8 +19,7 @@ limitations under the License.
 #include <logging.hpp>
 #include <yandex/disk.hpp>
 
-static const char USAGE[] =
-R"(Yandex disk uploader
+static const char USAGE[] = R"(Yandex disk uploader
 
 Usage:
   yadisk-upload [-v] [-C] [-a TOKEN] [-f] SOURCE DEST
@@ -44,12 +43,11 @@ Examples:
 
 struct Config
 {
-	void
-	ParseArgs(int argc, char* argv[])
+	void ParseArgs(int argc, char *argv[])
 	{
-		std::map<std::string, docopt::value> args
-			= docopt::docopt(USAGE, { argv + 1, argv + argc }, true, VERSION);
-		for (auto const& arg : args)
+		std::map<std::string, docopt::value> args =
+		    docopt::docopt(USAGE, {argv + 1, argv + argc}, true, VERSION);
+		for (auto const &arg : args)
 		{
 			if (arg.second)
 			{
@@ -72,16 +70,16 @@ struct Config
 	std::string auth;
 	std::string source;
 	std::string dest;
-    bool force{false};
+	bool force{false};
 	bool check_cert{true};
 };
 
 int
-main(int argc, char* argv[])
+main(int argc, char *argv[])
 {
 	Config cfg;
 	cfg.ParseArgs(argc, argv);
-	init_logging(cfg.verbose ? 1 : 0);
+	SimpleLogStream::verbose = cfg.verbose;
 
 	yandex::disk::api disk_api(cfg.auth, cfg.check_cert);
 	if (!disk_api.upload(cfg.source, cfg.dest, cfg.force))
@@ -89,4 +87,3 @@ main(int argc, char* argv[])
 
 	return 0;
 }
-

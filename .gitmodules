@@ -1,3 +1,0 @@
-[submodule "nxtools"]
-	path = nxtools
-	url = ../conan-nxtools.git

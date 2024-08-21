@@ -31,7 +31,7 @@ project(yadisk-upload)
 set(CMAKE_CXX_STANDARD 14)
 set(yadisk_upload_VERSION_MAJOR 0)
 set(yadisk_upload_VERSION_MINOR 0)
-set(yadisk_upload_VERSION_PATCH 7)
+set(yadisk_upload_VERSION_PATCH 9)
 add_definitions("-DVERSION=\"${yadisk_upload_VERSION_MAJOR}.${yadisk_upload_VERSION_MINOR}.${yadisk_upload_VERSION_PATCH}\"")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
@@ -52,9 +52,14 @@ set(YANDEX_API_SRC
 	src/yandex/transport.cpp
 )
 
-if (NOT WITH_LOG)
-	set(YANDEX_API_SRC ${YANDEX_API_SRC} src/Logging.cpp)
-endif()
+add_library(yandex_api ${YANDEX_API_SRC})
+
+########################################################################
+# requirements
+
+find_package(Boost COMPONENTS headers system filesystem REQUIRED)
+find_package(OpenSSL REQUIRED)
+target_link_libraries(yandex_api Boost::headers Boost::system Boost::filesystem openssl::openssl)
 
 add_library(yandex_api ${YANDEX_API_SRC})
 
@@ -71,7 +76,7 @@ target_link_libraries(yandex_api Boost::headers Boost::system Boost::filesystem 
 # replace logging.hpp
 if (NOT WITH_LOG)
 	set(WITH_LOG "${PROJECT_BINARY_DIR}/log")
-	configure_file("${PROJECT_SOURCE_DIR}/src/Logging.hpp" "${PROJECT_BINARY_DIR}/log/logging.hpp" COPYONLY)
+	configure_file("${PROJECT_SOURCE_DIR}/src/logging.hpp" "${PROJECT_BINARY_DIR}/log/logging.hpp" COPYONLY)
 	include_directories(BEFORE "${PROJECT_BINARY_DIR}/log")
 	find_package(easyloggingpp REQUIRED)
 	target_link_libraries(yandex_api easyloggingpp::easyloggingpp)
@@ -85,7 +90,7 @@ endif()
 if (WITH_TOOLS)
 	add_executable(yadisk-upload
 		src/yadisk-upload.cpp
-		src/Logging.cpp)
+		src/stdlogger.cpp)
 	add_dependencies(yadisk-upload yandex_api)
 	find_package(docopt REQUIRED)
 	target_link_libraries(yadisk-upload yandex_api docopt_s ${CMAKE_THREAD_LIBS_INIT})
