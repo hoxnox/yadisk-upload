@@ -79,7 +79,7 @@ main(int argc, char *argv[])
 {
 	Config cfg;
 	cfg.ParseArgs(argc, argv);
-	init_logging(cfg.verbose ? 1 : 0);
+	SimpleLogStream::verbose = cfg.verbose;
 
 	yandex::disk::api disk_api(cfg.auth, cfg.check_cert);
 	if (!disk_api.upload(cfg.source, cfg.dest, cfg.force))
