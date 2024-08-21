@@ -25,8 +25,6 @@ class YadiskUploadConan(ConanFile):
             self.requires("openssl/[>=1.1.0 <1.2.0]")
         if self.options.tools:
             self.requires("docopt.cpp/[>=0.6.3]")
-        if len(str(self.options.log)) == 0 or self.options.tools:
-            self.requires("easyloggingpp/[>=9.96.7]")
 
     def generate(self):
        deps = CMakeDeps(self)
