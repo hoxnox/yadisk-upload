@@ -31,7 +31,7 @@ project(yadisk-upload)
 set(CMAKE_CXX_STANDARD 14)
 set(yadisk_upload_VERSION_MAJOR 0)
 set(yadisk_upload_VERSION_MINOR 0)
-set(yadisk_upload_VERSION_PATCH 7)
+set(yadisk_upload_VERSION_PATCH 9)
 add_definitions("-DVERSION=\"${yadisk_upload_VERSION_MAJOR}.${yadisk_upload_VERSION_MINOR}.${yadisk_upload_VERSION_PATCH}\"")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
